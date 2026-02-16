@@ -190,7 +190,48 @@ Before diving in, let's understand the tools you'll be using. If you're coming f
 
 ---
 
-### 1.3 Clone and Install
+### 1.3 Optional Tools (ffmpeg, Whisper, yt-dlp, tesseract)
+
+These are **not required** for basic development (web page summarization, unit tests). You need them only if you're working on audio/video transcription, YouTube fallback paths, or slide extraction.
+
+| Tool | Role in Summarize | Source code |
+|------|-------------------|-------------|
+| **ffmpeg** | Transcodes audio/video → MP3 for Whisper. Splits large files into segments. Scene-detection for slide extraction. | `packages/core/src/transcription/whisper/ffmpeg.ts`, `src/slides/extract.ts` |
+| **Whisper** (whisper.cpp) | Local speech-to-text — converts audio → text transcript. Free, no API key. | `packages/core/src/transcription/whisper/whisper-cpp.ts` |
+| **yt-dlp** | Downloads audio/video from YouTube URLs when web transcript API fails. | `packages/core/src/content/transcript/providers/youtube/yt-dlp.ts` |
+| **tesseract** | OCR on slide screenshots extracted by ffmpeg. | `src/slides/extract.ts` |
+
+**The transcription pipeline (how they fit together):**
+
+```
+Audio/Video/YouTube
+  → yt-dlp downloads media (if URL)
+  → ffmpeg transcodes to MP3 + splits into segments if > 25MB
+  → Whisper.cpp (local) or cloud API (OpenAI/Groq/FAL) → text transcript
+  → LLM summarizes the transcript
+```
+
+**Installation:**
+
+```bash
+# macOS
+brew install ffmpeg yt-dlp tesseract whisper-cpp
+
+# Linux
+sudo apt install ffmpeg tesseract-ocr
+pip install yt-dlp
+# whisper.cpp: build from https://github.com/ggerganov/whisper.cpp
+
+# Windows
+winget install ffmpeg
+winget install yt-dlp
+```
+
+**Test setup note:** `tests/setup.ts` sets `SUMMARIZE_DISABLE_LOCAL_WHISPER_CPP=1` so unit tests don't require Whisper to be installed.
+
+---
+
+### 1.4 Clone and Install
 
 ```bash
 # Clone the repository (replace with actual URL)
@@ -211,7 +252,7 @@ pnpm install
 
 ---
 
-### 1.4 Verify the Setup
+### 1.5 Verify the Setup
 
 Run these commands to ensure everything is working:
 
@@ -1509,6 +1550,10 @@ pnpm summarize "https://example.com" --verbose
 ### 5.4 Working on the Browser Extension
 
 The browser extension is in `apps/chrome-extension/`.
+
+> **YouTube support:** The extension supports YouTube video summarization out of the box. The extension sends the YouTube URL to the daemon, which extracts the transcript server-side (YouTube web API → yt-dlp → Whisper fallback chain) and summarizes it. See `src/daemon/summarize.ts` for the detection logic (`isYouTubeUrl()`).
+>
+> **Known limitation — PDFs:** The extension **cannot** read PDFs rendered in the browser's built-in PDF viewer (e.g., `arxiv.org/pdf/...`). The PDF viewer is a separate browser component whose content is not exposed to the DOM. Unlike YouTube (where the URL alone is enough for the daemon to extract content), PDFs would require the extension to download and forward the file to the daemon, which it doesn't currently do. Workaround: navigate to the HTML version of the page (e.g., `arxiv.org/abs/...`), or use the CLI for PDF/media summarization.
 
 **Tech stack:**
 - **WXT**: Extension framework (handles Chrome/Firefox differences)

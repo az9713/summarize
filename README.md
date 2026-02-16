@@ -27,7 +27,7 @@ Fast summaries from URLs, files, and media. Works in the terminal, a Chrome Side
 
 - URLs, files, and media: web pages, PDFs, images, audio/video, YouTube, podcasts, RSS.
 - Slide extraction for video sources (YouTube/direct media) with OCR + timestamped cards.
-- Transcript-first media flow: published transcripts when available, Whisper fallback when not.
+- Transcript-first media flow: published transcripts when available, Whisper fallback when not. Audio/video pipeline: `yt-dlp` (download) → `ffmpeg` (transcode/split) → `whisper.cpp` or cloud Whisper (speech→text) → LLM summary. All optional — only needed for audio/video content.
 - Streaming output with Markdown rendering, metrics, and cache-aware status.
 - Local, paid, and free models: OpenAI‑compatible local endpoints, paid providers, plus an OpenRouter free preset.
 - Output modes: Markdown/text, JSON diagnostics, extract-only, metrics, timing, and cost estimates.
@@ -248,6 +248,10 @@ Apple Silicon only (arm64).
 
 - **CLI only:** just install via npm/Homebrew and run `summarize ...` (no daemon needed).
 - **Chrome/Firefox extension:** install the CLI **and** run `summarize daemon install --token <TOKEN>` so the Side Panel can stream results and use local tools.
+
+> **Extension + YouTube:** The extension fully supports YouTube video summarization. Navigate to any YouTube video and click Summarize — the daemon extracts the transcript server-side (via YouTube web API, yt-dlp, or Whisper) and summarizes it.
+>
+> **Extension limitation:** The extension cannot read PDFs rendered in the browser's built-in PDF viewer (e.g., `arxiv.org/pdf/...` links) or other embedded binary files. The PDF viewer is a separate browser component whose content is not exposed to the DOM. Workaround: use the HTML version of the page (e.g., `arxiv.org/abs/...` instead of `arxiv.org/pdf/...`), or use the CLI for PDFs and media.
 
 ### Quickstart
 

@@ -98,7 +98,59 @@ Then install Summarize:
 npm install -g @steipete/summarize
 ```
 
-### 2.2 Verify Installation
+### 2.2 Optional Tools (ffmpeg, Whisper, yt-dlp, tesseract)
+
+Summarize works out of the box for web pages and text. For **audio, video, YouTube, and podcasts**, it relies on optional local tools:
+
+| Tool | What it does in Summarize | Required for |
+|------|---------------------------|--------------|
+| **ffmpeg** | Transcodes audio/video to MP3 for transcription. Splits large files into segments. Detects scene changes to extract slides from videos. `ffprobe` (bundled with ffmpeg) measures media duration for progress bars. | Audio/video transcription, slide extraction |
+| **Whisper** (whisper.cpp) | Converts speech to text locally — no API key or cloud service needed. Summarize feeds it audio (via ffmpeg) and gets back a text transcript that the LLM then summarizes. | Free local transcription (alternative: OpenAI/Groq/FAL cloud APIs) |
+| **yt-dlp** | Downloads audio/video from YouTube and other sites. Used when YouTube's web transcript API has no captions available. | YouTube videos without captions, slide extraction |
+| **tesseract** | OCR — extracts text from slide screenshot images produced by ffmpeg scene detection. | Slide text extraction (optional) |
+
+**The transcription pipeline:**
+
+```
+Audio/Video file or YouTube URL
+  → yt-dlp downloads media (if URL)
+  → ffmpeg transcodes to MP3 + splits if too large
+  → Whisper (local) or cloud API converts speech → text transcript
+  → LLM summarizes the transcript
+```
+
+**Installation:**
+
+```bash
+# macOS (Homebrew)
+brew install ffmpeg yt-dlp tesseract
+
+# For local Whisper transcription (free, no API key needed):
+brew install whisper-cpp
+# Or download from: https://github.com/ggerganov/whisper.cpp
+
+# Windows (winget)
+winget install ffmpeg
+winget install yt-dlp
+# Or download from their respective GitHub releases pages
+
+# Linux (apt)
+sudo apt install ffmpeg tesseract-ocr
+pip install yt-dlp
+```
+
+**If you don't install these tools:**
+- Web pages, articles, and text files work normally — no extra tools needed
+- YouTube videos with existing captions still work (transcript fetched via web API)
+- YouTube videos *without* captions, podcasts, and local audio/video files will fail transcription
+- Slide extraction won't be available
+
+**Cloud alternatives to local Whisper** (no local install needed, but requires API keys):
+- OpenAI Whisper API: set `OPENAI_API_KEY`
+- Groq: set `GROQ_API_KEY`
+- FAL: set `FAL_KEY`
+
+### 2.3 Verify Installation
 
 After installation, verify it worked by checking the version:
 
@@ -711,6 +763,23 @@ summarize "/path/to/tutorial.mov"
 
 The browser extension lets you summarize any web page with a single click from Chrome or Firefox.
 
+> **YouTube support:** The extension fully supports YouTube video summarization. Just navigate to any YouTube video and click Summarize — the daemon extracts the transcript server-side using YouTube's web API, yt-dlp, or Whisper, then sends it to the LLM for summarization. No extra setup needed beyond the daemon.
+>
+> **Limitation — PDFs and binary files:** The extension **cannot** read:
+> - PDFs rendered in the browser's built-in PDF viewer (e.g., `arxiv.org/pdf/...` links)
+> - Embedded binary files (images, audio, video files)
+> - Content behind JavaScript-heavy rendering that doesn't expose text to the DOM
+>
+> The browser's PDF viewer is a separate component — the extension can only access the HTML DOM, not the PDF content inside it. For YouTube, the URL alone is enough for the daemon to extract the transcript; for PDFs, the extension would need to download and forward the file, which it doesn't currently do.
+>
+> **Workarounds for PDFs:**
+> - Navigate to the HTML version of the page (e.g., use `arxiv.org/abs/...` instead of `arxiv.org/pdf/...`)
+> - Use the CLI for PDFs and other non-HTML content:
+>   ```bash
+>   summarize "https://arxiv.org/pdf/2507.11538" --model google/gemini-3-flash-preview
+>   summarize "/path/to/document.pdf" --model google/gemini-3-flash-preview
+>   ```
+
 ### 6.1 Install the Extension
 
 #### For Chrome
@@ -1135,6 +1204,17 @@ nano ~/.summarize/config.json
    summarize "file.pdf" --extract
    ```
 3. Some encrypted or scanned PDFs may not work well
+
+### Problem: Browser extension extracts only a few words from a PDF
+
+The browser extension cannot read PDFs rendered in Chrome/Firefox's built-in PDF viewer. The PDF viewer is a separate embedded component — the extension can only access the HTML DOM, not the PDF content inside it.
+
+**Solution:**
+1. Navigate to the HTML version of the page (e.g., `arxiv.org/abs/...` instead of `arxiv.org/pdf/...`)
+2. Or use the CLI instead:
+   ```bash
+   summarize "https://arxiv.org/pdf/2507.11538" --model google/gemini-3-flash-preview
+   ```
 
 ### Getting Help
 
