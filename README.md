@@ -5,24 +5,28 @@
 > This clone is for study, documentation, and local development purposes.
 > For the latest updates, issues, and contributions, please refer to the [original repository](https://github.com/steipete/summarize).
 
+**NEW: PDF summarization in the Chrome extension** — navigate to any PDF URL and click Summarize. The daemon downloads and converts it server-side via `markitdown`, then streams a full Markdown summary.
+
+![Summarize PDF in Chrome extension](docs/summarize_pdf.jpg)
+
 ---
 
 ![GitHub Repo Banner](https://ghrb.waren.build/banner?header=Summarize%F0%9F%93%9D&subheader=Chrome+Side+Panel+%2B+CLI&bg=f3f4f6&color=1f2937&support=true)
 
 <!-- Created with GitHub Repo Banner by Waren Gonzaga: https://ghrb.waren.build -->
 
-Fast summaries from URLs, files, and media. Works in the terminal, a Chrome Side Panel and Firefox Sidebar.
+Fast summaries from URLs, files, and media — including PDFs, YouTube, podcasts, and images. Works in the terminal, a Chrome Side Panel and Firefox Sidebar.
 
 **0.11.0 preview (unreleased):** this README reflects the upcoming release.
 
 ## 0.11.0 preview highlights (most interesting first)
 
+- **PDF support in extension**: navigate to any PDF URL (arxiv, papers, docs) and click Summarize — the daemon downloads and converts the PDF server-side via `markitdown`, then streams a full summary.
 - Chrome Side Panel **chat** (streaming agent + history) inside the sidebar.
 - **YouTube slides**: screenshots + OCR + transcript cards, timestamped seek, OCR/Transcript toggle.
 - Media-aware summaries: auto‑detect video/audio vs page content.
 - Streaming Markdown + metrics + cache‑aware status.
 - CLI supports URLs, files, podcasts, YouTube, audio/video, PDFs.
-- **PDF support in extension**: navigate to any PDF URL and click Summarize — daemon downloads and processes it server-side.
 
 ## Feature overview
 
@@ -256,11 +260,7 @@ Apple Silicon only (arm64).
 
 > **Extension + YouTube:** The extension fully supports YouTube video summarization. Navigate to any YouTube video and click Summarize — the daemon extracts the transcript server-side (via YouTube web API, yt-dlp, or Whisper) and summarizes it.
 >
-> **Extension + PDFs:** The extension supports PDF URLs (e.g., `arxiv.org/pdf/...`). PDF URLs are detected automatically and routed to the daemon, which downloads the PDF and converts it to text via `uvx markitdown` before summarizing. Requires `uvx` installed (see `--preprocess` flag) or `UVX_PATH` set in `~/.summarize/daemon.json`.
-
-PDF summarization from the Chrome extension (arxiv paper):
-
-![Summarize PDF in Chrome extension](docs/summarize_pdf.jpg)
+> **Extension + PDFs:** PDF URLs are detected automatically and routed to the daemon, which downloads and converts them via `markitdown`. Requires `uvx` installed or `UVX_PATH` set in `~/.summarize/daemon.json`. See the screenshot at the top of this README.
 
 ### Quickstart
 
