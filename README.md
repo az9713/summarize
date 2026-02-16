@@ -33,6 +33,10 @@ Fast summaries from URLs, files, and media. Works in the terminal, a Chrome Side
 - Output modes: Markdown/text, JSON diagnostics, extract-only, metrics, timing, and cost estimates.
 - Smart default: if content is shorter than the requested length, we return it as-is (use `--force-summary` to override).
 
+### Why Summarize instead of asking an AI chatbot?
+
+For simple web pages, pasting a URL into Claude or ChatGPT works fine. Summarize is built for what chatbots can't do: YouTube/podcast transcription (yt-dlp + Whisper), PDF parsing, video slide extraction (ffmpeg + OCR), SQLite caching (same URL twice is instant and free), cost tracking, batch processing, multi-provider switching, and one-click browser extension summaries.
+
 ## Get the extension (recommended)
 
 ![Summarize extension screenshot](docs/assets/summarize-extension.png)
@@ -650,6 +654,19 @@ Precedence:
 2. `SUMMARIZE_MODEL`
 3. `~/.summarize/config.json`
 4. default (`auto`)
+
+**Auto model selection** (when no model is specified): tries candidates in order, uses the first one you have an API key for.
+
+| Content type | Candidate priority |
+|---|---|
+| Website, YouTube, text (≤200k tokens) | `google/gemini-3-flash-preview` → `openai/gpt-5-mini` → `anthropic/claude-sonnet-4-5` |
+| Website, YouTube, text (>200k tokens) | `xai/grok-4-fast-non-reasoning` → Google → OpenAI → Anthropic |
+| Video understanding | `google/gemini-3-flash-preview` |
+| Image, file/PDF | Google → OpenAI → Anthropic |
+
+If no API keys are set, falls back to CLI providers: `claude` → `gemini` → `codex` → `agent`. Customizable via `cli.autoFallback.order` in config. See `src/model-auto.ts` for the full rules.
+
+**`--model` vs `--cli`:** `--model` makes direct HTTP API calls using your API key (per-token billing). `--cli claude` shells out to the locally installed `claude` CLI binary (uses your Claude subscription). If both reach the same model (e.g., Claude Sonnet), the output is the same — only auth and billing differ.
 
 Theme precedence:
 

@@ -23,6 +23,35 @@ Summarize works in two ways:
 1. **Command-line tool (CLI)**: Run commands in your Terminal or Command Prompt
 2. **Browser extension**: Click a button in Chrome or Firefox to summarize the current page
 
+### Why use Summarize instead of asking an AI chatbot directly?
+
+You might wonder: "Why not just paste a URL into Claude, ChatGPT, or Claude Code and ask it to summarize?" For simple web pages, that works fine. Summarize is purpose-built for cases where general AI tools fall short:
+
+| Capability | Summarize | AI chatbot (Claude Code, ChatGPT, etc.) |
+|---|---|---|
+| **YouTube videos** | Extracts transcript via yt-dlp + Whisper, then summarizes | Cannot transcribe video audio |
+| **Podcasts / audio files** | Downloads and transcribes audio, then summarizes | Cannot process audio |
+| **PDFs** | Direct PDF text extraction and parsing | Limited or no PDF parsing from URLs |
+| **Video slide extraction** | Scene detection (ffmpeg) + OCR (tesseract) | Not available |
+| **Caching** | SQLite cache — same URL twice is instant and free | Every request costs tokens |
+| **Cost tracking** | Shows exact token usage and cost per summary | No per-request cost visibility |
+| **Batch processing** | `summarize "url1" "url2" "url3"` in one command | One at a time |
+| **Browser extension** | One-click summarize while browsing | Must switch to chat window |
+| **Multiple providers** | Switch between OpenAI, Google, Anthropic, xAI, free models | Locked to one provider |
+| **Length control** | Tuned presets: short/medium/long/xl/xxl | Prompt-dependent, less consistent |
+
+**Use an AI chatbot when:**
+- You need a one-off summary of a simple web page
+- You're already in a chat session and want a quick answer
+- You want to ask follow-up questions about the content
+
+**Use Summarize when:**
+- The content is YouTube, podcasts, audio, video, or PDFs
+- You summarize URLs repeatedly (caching saves time and money)
+- You want cost control or need to compare models
+- You're browsing and want one-click summaries (extension)
+- You need batch/scripting workflows
+
 ### What AI models does it use?
 
 Summarize can work with multiple AI providers:
@@ -378,6 +407,74 @@ summarize "https://example.com" --cli codex
 #### Automatic CLI fallback
 
 If you have no API keys configured, Summarize will automatically try to use available CLI providers. It will remember which one worked last time and prefer it next time.
+
+### 3.6 How Auto Model Selection Works
+
+When you run Summarize **without specifying `--model` or `--cli`**, it uses **auto-selection** (`--model auto` is the default). Auto-selection picks the best available model based on your API keys and the content type.
+
+**Priority order for websites, YouTube, and text** (under 50k tokens):
+
+| Priority | Model | Required API key |
+|----------|-------|------------------|
+| 1st | `google/gemini-3-flash-preview` | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| 2nd | `openai/gpt-5-mini` | `OPENAI_API_KEY` |
+| 3rd | `anthropic/claude-sonnet-4-5` | `ANTHROPIC_API_KEY` |
+
+Summarize tries each candidate in order and uses the **first one you have an API key for**. For example, if you only have `OPENAI_API_KEY` set, it will use `openai/gpt-5-mini`.
+
+**Special cases:**
+- **Video understanding**: prefers `google/gemini-3-flash-preview` (best video support)
+- **Images**: prefers Google, then OpenAI, then Anthropic
+- **PDFs/files**: prefers Google (best PDF support), then OpenAI, then Anthropic
+- **Very large content** (200k+ tokens): tries `xai/grok-4-fast-non-reasoning` first (largest context window)
+
+**If no API keys are set at all**, Summarize falls back to CLI providers in this order:
+1. `claude` (Claude CLI)
+2. `gemini` (Gemini CLI)
+3. `codex` (OpenAI Codex CLI)
+4. `agent` (Agent CLI)
+
+**To override auto-selection**, use `--model` or `--cli`:
+
+```bash
+# Use a specific model
+summarize "https://example.com" --model anthropic/claude-sonnet-4-5
+
+# Use a CLI provider
+summarize "https://example.com" --cli claude
+
+# Set a default in config so you never need --model
+# Add to ~/.summarize/config.json:
+# { "model": "openai/gpt-5-mini" }
+```
+
+### 3.7 `--model auto` vs `--cli claude` — What's the Difference?
+
+These are **two different ways** to reach an LLM:
+
+| | `--model auto` (default) | `--cli claude` |
+|---|---|---|
+| **How it calls the LLM** | Direct HTTP API call (e.g., `api.openai.com`, `api.anthropic.com`) | Shells out to the `claude` CLI binary installed on your machine |
+| **Authentication** | API key from env var (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) | The Claude CLI's own login session |
+| **Which model** | First available by priority (Google → OpenAI → Anthropic) | Claude Sonnet (default for `--cli claude`) |
+| **Billing** | Per-token API pricing from your provider | Your Claude subscription plan |
+
+**Example:** If your only API key is `ANTHROPIC_API_KEY`, then both of these commands end up using Claude Sonnet:
+
+```bash
+# Auto-selects anthropic/claude-sonnet-4-5 (via direct API, billed per-token)
+summarize "https://example.com"
+
+# Uses claude CLI binary (billed via your Claude subscription)
+summarize "https://example.com" --cli claude
+```
+
+The summary output is essentially the same — same model, same content. The difference is the billing path and how the request reaches Anthropic's servers.
+
+**When to use which:**
+- **`--model auto`** (or `--model provider/model`): when you have API keys and want direct API access with per-token billing
+- **`--cli claude`**: when you have the Claude CLI installed and want to use your Claude subscription instead of API billing
+- Other CLI options: `--cli gemini` (Gemini CLI), `--cli codex` (OpenAI Codex CLI)
 
 ---
 
@@ -1290,7 +1387,7 @@ summarize <input> [flags]
 | Anthropic | `anthropic/claude-sonnet-4-5` | Nuanced analysis |
 | xAI | `xai/grok-4-fast-non-reasoning` | Very fast |
 | OpenRouter | `free` | Free models |
-| Auto | `auto` | Automatic selection |
+| Auto | `auto` (default) | Picks first available by priority: Google → OpenAI → Anthropic → xAI |
 
 ### Language Options
 

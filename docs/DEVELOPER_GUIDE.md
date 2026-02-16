@@ -1160,7 +1160,79 @@ console.log("File contents:", contents);
 
 ## Part 5: Making Changes
 
-### 5.1 Adding a New LLM Provider
+### 5.1 Auto Model Selection (how `--model auto` works)
+
+When the user doesn't specify `--model` or `--cli`, the default is `--model auto`. The auto-selection logic lives in `src/model-auto.ts` (`buildAutoModelAttempts()`) and `src/run/run-models.ts`.
+
+**Resolution order:**
+1. `--model <id>` flag (explicit) — used as-is
+2. `SUMMARIZE_MODEL` env var — used as-is
+3. `model.id` in `~/.summarize/config.json` — used as-is
+4. Falls through to `auto`
+
+**Auto-selection rules** (from `DEFAULT_RULES` in `src/model-auto.ts`):
+
+Each rule matches a content kind and returns an ordered candidate list. The first candidate with a valid API key wins.
+
+```
+Content: website, youtube, text (≤50k tokens)
+  → google/gemini-3-flash-preview
+  → openai/gpt-5-mini
+  → anthropic/claude-sonnet-4-5
+
+Content: website, youtube, text (≤200k tokens)
+  → google/gemini-3-flash-preview
+  → openai/gpt-5-mini
+  → anthropic/claude-sonnet-4-5
+
+Content: website, youtube, text (>200k tokens)
+  → xai/grok-4-fast-non-reasoning  (largest context window)
+  → google/gemini-3-flash-preview
+  → openai/gpt-5-mini
+  → anthropic/claude-sonnet-4-5
+
+Content: video
+  → google/gemini-3-flash-preview
+
+Content: image
+  → google/gemini-3-flash-preview
+  → openai/gpt-5-mini
+  → anthropic/claude-sonnet-4-5
+
+Content: file (PDF, etc.)
+  → google/gemini-3-flash-preview
+  → openai/gpt-5-mini
+  → anthropic/claude-sonnet-4-5
+```
+
+**CLI fallback** (when no API keys are set): if auto-selection finds no usable API key, it falls back to CLI providers in order: `claude` → `gemini` → `codex` → `agent` (configurable via `cli.autoFallback.order` in config). The default models for CLI providers are defined in `DEFAULT_CLI_MODELS`:
+
+```typescript
+// src/model-auto.ts
+const DEFAULT_CLI_MODELS: Record<CliProvider, string> = {
+  claude: "sonnet",
+  codex: "gpt-5.2",
+  gemini: "gemini-3-flash-preview",
+  agent: "gpt-5.2",
+};
+```
+
+**To modify auto-selection rules**, edit `DEFAULT_RULES` in `src/model-auto.ts`. Users can also override via the `autoRules` array in `~/.summarize/config.json`.
+
+**`--model` vs `--cli` — two different code paths:**
+
+These flags take completely different paths through the codebase:
+
+| | `--model auto` / `--model provider/id` | `--cli claude` / `--cli gemini` / etc. |
+|---|---|---|
+| Code path | `src/llm/generate-text.ts` → `src/llm/providers/{openai,anthropic,google}.ts` | `src/model-spec.ts` → shells out to CLI binary |
+| Auth | API key env var (`OPENAI_API_KEY`, etc.) | CLI tool's own auth session |
+| Billing | Per-token API pricing | CLI subscription plan |
+| Streaming | Native HTTP SSE streaming | Captures CLI stdout |
+
+If the user has `ANTHROPIC_API_KEY` and also has the `claude` CLI installed, both `--model anthropic/claude-sonnet-4-5` and `--cli claude` reach the same underlying model — but through different auth/billing paths. The `--cli` path spawns a child process (`src/model-spec.ts`), while the `--model` path makes direct HTTP calls (`src/llm/providers/anthropic.ts`).
+
+### 5.2 Adding a New LLM Provider
 
 Let's say you want to add support for a new LLM provider called "NewProvider".
 
@@ -1352,7 +1424,7 @@ pnpm test
 
 ---
 
-### 5.2 Adding a New CLI Flag
+### 5.3 Adding a New CLI Flag
 
 Let's add a `--max-retries` flag to control LLM retry behavior.
 
@@ -1483,7 +1555,7 @@ pnpm summarize --help
 
 ---
 
-### 5.3 Modifying Content Extraction
+### 5.4 Modifying Content Extraction
 
 The content extraction pipeline is in `packages/core/src/content/`.
 
@@ -1547,7 +1619,7 @@ pnpm summarize "https://example.com" --verbose
 
 ---
 
-### 5.4 Working on the Browser Extension
+### 5.5 Working on the Browser Extension
 
 The browser extension is in `apps/chrome-extension/`.
 
