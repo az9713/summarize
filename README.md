@@ -669,15 +669,28 @@ pnpm install
 pnpm check
 ```
 
-## More
+## Documentation
 
-- Docs index: [docs/README.md](docs/README.md)
-- CLI providers and config: [docs/cli.md](docs/cli.md)
-- Auto model rules: [docs/model-auto.md](docs/model-auto.md)
-- Website extraction: [docs/website.md](docs/website.md)
-- YouTube handling: [docs/youtube.md](docs/youtube.md)
-- Media pipeline: [docs/media.md](docs/media.md)
-- Config schema and precedence: [docs/config.md](docs/config.md)
+### For Users
+
+- **[User Guide](docs/USER_GUIDE.md)** — Step-by-step guide with 12 practical use cases. Start here if you're new to Summarize.
+
+### For Developers
+
+- **[Developer Guide](docs/DEVELOPER_GUIDE.md)** — Complete onboarding guide for developers new to TypeScript/Node.js. Covers environment setup, daily workflow, key concepts (async/await, SSE, fetch), and how to make changes.
+- **[Architecture](docs/ARCHITECTURE.md)** — Comprehensive architecture documentation with ASCII diagrams showing system overview, execution flows, daemon protocol, extension messaging, LLM provider system, and caching.
+
+### Reference
+
+- [CLI providers and config](docs/cli.md)
+- [Auto model rules](docs/model-auto.md)
+- [Website extraction](docs/website.md)
+- [YouTube handling](docs/youtube.md)
+- [Media pipeline](docs/media.md)
+- [Config schema and precedence](docs/config.md)
+- [Chrome extension architecture](docs/chrome-extension.md)
+- [NVIDIA ONNX transcription](docs/nvidia-onnx-transcription.md)
+- [Docs index](docs/README.md)
 
 ## Troubleshooting
 
@@ -687,5 +700,6 @@ pnpm check
 - "Failed to fetch" / daemon unreachable:
   - `summarize daemon status`
   - Logs: `~/.summarize/logs/daemon.err.log`
+- More troubleshooting: see [User Guide - Troubleshooting](docs/USER_GUIDE.md#part-8-troubleshooting)
 
 License: MIT
