@@ -77,7 +77,7 @@
     "esbuild": "^0.27.3",
     "oxfmt": "0.32.0",
     "oxlint": "^1.47.0",
-    "oxlint-tsgolint": "^0.12.2",
+    "oxlint-tsgolint": "^0.13.0",
     "rimraf": "^6.1.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
