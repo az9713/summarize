@@ -37,6 +37,7 @@ export {
   extractYouTubeVideoId,
   isDirectMediaExtension,
   isDirectMediaUrl,
+  isPdfUrl,
   isPodcastHost,
   isTwitterBroadcastUrl,
   isTwitterStatusUrl,

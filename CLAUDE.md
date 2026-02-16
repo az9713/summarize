@@ -78,51 +78,52 @@ src/cli.ts → src/cli-main.ts → src/run/runner.ts
 
 ### Key Modules (src/)
 
-| Path | Purpose |
-|------|---------|
-| `run/runner.ts` | Main CLI orchestration |
-| `run/summary-engine.ts` | Summary generation pipeline, streaming + non-streaming |
-| `run/flows/url/` | URL processing: extract → markdown → summarize → output |
-| `run/flows/asset/` | File processing: detect → extract → preprocess → media → summarize |
-| `llm/generate-text.ts` | Text generation: generateTextWithModelId / streamTextWithModelId |
-| `llm/model-id.ts` | Model ID parsing: `provider/model` format → ParsedModelId |
-| `llm/providers/` | Per-provider implementations (OpenAI, Anthropic, Google, xAI, Z.AI, NVIDIA) |
-| `config.ts` | Config loading + merging. Precedence: CLI flags > env > ~/.summarize/config.json > defaults |
-| `flags.ts` | CLI flag parsers (length, format, modes, durations) |
-| `cache.ts` | SQLite cache: kinds = extract, summary, transcript, chat, slides. TTL-based. |
-| `model-auto.ts` | Auto model selection: matches content kind + token bands → candidate list |
-| `daemon/server.ts` | HTTP server on 127.0.0.1:8787, SSE streaming, Bearer token auth |
-| `daemon/agent.ts` | Agent responses for browser extension chat (8 tools) |
-| `tty/theme.ts` | Theme system: aurora (default), ember, moss, mono |
-| `slides/` | Video slide extraction via ffmpeg scene detection + OCR |
-| `shared/sse-events.ts` | SSE event types: meta, status, chunk, slides, metrics, done, error |
+| Path                    | Purpose                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| `run/runner.ts`         | Main CLI orchestration                                                                      |
+| `run/summary-engine.ts` | Summary generation pipeline, streaming + non-streaming                                      |
+| `run/flows/url/`        | URL processing: extract → markdown → summarize → output                                     |
+| `run/flows/asset/`      | File processing: detect → extract → preprocess → media → summarize                          |
+| `llm/generate-text.ts`  | Text generation: generateTextWithModelId / streamTextWithModelId                            |
+| `llm/model-id.ts`       | Model ID parsing: `provider/model` format → ParsedModelId                                   |
+| `llm/providers/`        | Per-provider implementations (OpenAI, Anthropic, Google, xAI, Z.AI, NVIDIA)                 |
+| `config.ts`             | Config loading + merging. Precedence: CLI flags > env > ~/.summarize/config.json > defaults |
+| `flags.ts`              | CLI flag parsers (length, format, modes, durations)                                         |
+| `cache.ts`              | SQLite cache: kinds = extract, summary, transcript, chat, slides. TTL-based.                |
+| `model-auto.ts`         | Auto model selection: matches content kind + token bands → candidate list                   |
+| `daemon/server.ts`      | HTTP server on 127.0.0.1:8787, SSE streaming, Bearer token auth                             |
+| `daemon/summarize.ts`   | Daemon summarization: streamSummaryForUrl (PDF fast path + URL flow), extractContentForUrl  |
+| `daemon/agent.ts`       | Agent responses for browser extension chat (8 tools)                                        |
+| `tty/theme.ts`          | Theme system: aurora (default), ember, moss, mono                                           |
+| `slides/`               | Video slide extraction via ffmpeg scene detection + OCR                                     |
+| `shared/sse-events.ts`  | SSE event types: meta, status, chunk, slides, metrics, done, error                          |
 
 ### Core Library (packages/core/src/)
 
-| Path | Purpose |
-|------|---------|
-| `content/link-preview/client.ts` | createLinkPreviewClient() — content extraction orchestrator |
-| `content/link-preview/content/` | HTML parsing (Cheerio + JSDOM + @mozilla/readability + sanitize-html) |
-| `content/transcript/` | Transcript providers: YouTube web API, Apify, yt-dlp + Whisper |
-| `prompts/link-summary.ts` | buildLinkSummaryPrompt() — parameterized summary prompt builder |
-| `prompts/summary-lengths.ts` | Length presets: short/medium/long/xl/xxl with char targets |
-| `openai/` | OpenAI-compatible API utilities |
-| `shared/contracts.ts` | Shared type contracts (SummaryLength, etc.) |
+| Path                             | Purpose                                                               |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `content/link-preview/client.ts` | createLinkPreviewClient() — content extraction orchestrator           |
+| `content/link-preview/content/`  | HTML parsing (Cheerio + JSDOM + @mozilla/readability + sanitize-html) |
+| `content/transcript/`            | Transcript providers: YouTube web API, Apify, yt-dlp + Whisper        |
+| `prompts/link-summary.ts`        | buildLinkSummaryPrompt() — parameterized summary prompt builder       |
+| `prompts/summary-lengths.ts`     | Length presets: short/medium/long/xl/xxl with char targets            |
+| `openai/`                        | OpenAI-compatible API utilities                                       |
+| `shared/contracts.ts`            | Shared type contracts (SummaryLength, etc.)                           |
 
 ### Daemon Server (src/daemon/)
 
 HTTP server on 127.0.0.1:8787. Key routes:
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/health` | GET | Health check (no auth) |
-| `/v1/ping` | GET | Auth verification (Bearer token) |
-| `/v1/summarize` | POST | Start summarization (returns session ID) |
-| `/v1/summarize/{id}/events` | GET | SSE stream for session |
-| `/v1/agent` | POST | Agent chat (SSE or JSON) |
-| `/v1/tools` | GET | Available tools (yt-dlp, ffmpeg, tesseract) |
-| `/v1/models` | GET | Available LLM models |
-| `/v1/summarize/{id}/slides` | GET | Cached slides for session |
+| Route                       | Method | Purpose                                     |
+| --------------------------- | ------ | ------------------------------------------- |
+| `/health`                   | GET    | Health check (no auth)                      |
+| `/v1/ping`                  | GET    | Auth verification (Bearer token)            |
+| `/v1/summarize`             | POST   | Start summarization (returns session ID)    |
+| `/v1/summarize/{id}/events` | GET    | SSE stream for session                      |
+| `/v1/agent`                 | POST   | Agent chat (SSE or JSON)                    |
+| `/v1/tools`                 | GET    | Available tools (yt-dlp, ffmpeg, tesseract) |
+| `/v1/models`                | GET    | Available LLM models                        |
+| `/v1/summarize/{id}/slides` | GET    | Cached slides for session                   |
 
 Sessions: 30 min max lifetime, 2000 event buffer. Platform services: launchd (macOS), systemd (Linux), schtasks (Windows).
 
@@ -164,6 +165,7 @@ Multiple agents often work in this folder. If you see files/changes you don't re
 ## Rebuild After Changes
 
 When modifying extension or daemon code, run both in order:
+
 1. `pnpm -C apps/chrome-extension build`
 2. `pnpm summarize daemon restart`
 

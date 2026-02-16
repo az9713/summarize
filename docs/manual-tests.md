@@ -50,6 +50,13 @@ Tip: use `--verbose` to see model attempts + the chosen model.
 - Local video understanding (requires Gemini video-capable model; otherwise expect an error or transcript-only behavior depending on input):
   - `summarize ./path/to/video.mp4 --max-output-tokens 200`
 
+## PDF (extension fast path)
+
+- PDF URL via CLI (should download PDF, convert via markitdown, then summarize):
+  - `summarize --max-output-tokens 200 https://arxiv.org/pdf/2507.11538`
+- PDF URL via extension: navigate to `https://arxiv.org/pdf/2507.11538`, click Summarize. Should show "Downloading PDF…" status, then a proper summary.
+  - Requires: `uvx` installed or `UVX_PATH` set in `~/.summarize/daemon.json`.
+
 ## Z.AI
 
 - `summarize --model zai/glm-4.7 --max-output-tokens 200 https://example.com`

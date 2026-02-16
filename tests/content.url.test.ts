@@ -3,6 +3,7 @@ import {
   extractYouTubeVideoId,
   isDirectMediaExtension,
   isDirectMediaUrl,
+  isPdfUrl,
   isPodcastHost,
   isTwitterBroadcastUrl,
   isTwitterStatusUrl,
@@ -68,6 +69,19 @@ describe("content/url", () => {
     expect(isPodcastHost("https://example.com/podcast")).toBe(false);
   });
 
+  it("detects PDF URLs", () => {
+    expect(isPdfUrl("https://example.com/paper.pdf")).toBe(true);
+    expect(isPdfUrl("https://example.com/paper.PDF")).toBe(true);
+    expect(isPdfUrl("https://example.com/paper.pdf?dl=1")).toBe(true);
+    expect(isPdfUrl("https://example.com/paper.pdf#page=5")).toBe(true);
+    expect(isPdfUrl("https://arxiv.org/pdf/2507.11538")).toBe(true);
+    expect(isPdfUrl("https://arxiv.org/pdf/2507.11538v2")).toBe(true);
+    expect(isPdfUrl("https://example.com/article")).toBe(false);
+    expect(isPdfUrl("https://example.com/pdf-viewer")).toBe(false);
+    expect(isPdfUrl("https://arxiv.org/abs/2507.11538")).toBe(false);
+    expect(isPdfUrl("not a url")).toBe(false);
+  });
+
   it("prefers url mode for media-like urls", () => {
     expect(shouldPreferUrlMode("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(true);
     expect(shouldPreferUrlMode("https://x.com/user/status/123")).toBe(true);
@@ -76,6 +90,8 @@ describe("content/url", () => {
     expect(shouldPreferUrlMode("https://open.spotify.com/episode/7makk4oTQel546B0PZlDM5")).toBe(
       true,
     );
+    expect(shouldPreferUrlMode("https://example.com/paper.pdf")).toBe(true);
+    expect(shouldPreferUrlMode("https://arxiv.org/pdf/2507.11538")).toBe(true);
     expect(shouldPreferUrlMode("https://example.com/article")).toBe(false);
   });
 });

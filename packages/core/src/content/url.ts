@@ -107,13 +107,27 @@ export function isDirectMediaExtension(ext: string): boolean {
   return DIRECT_MEDIA_EXTENSION_SET.has(normalized);
 }
 
+export function isPdfUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const pathname = parsed.pathname.toLowerCase();
+    if (pathname.endsWith(".pdf")) return true;
+    // arxiv.org serves PDFs at /pdf/<id> without .pdf extension
+    if (parsed.hostname.includes("arxiv.org") && pathname.startsWith("/pdf/")) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function shouldPreferUrlMode(url: string): boolean {
   return (
     isYouTubeVideoUrl(url) ||
     isTwitterStatusUrl(url) ||
     isTwitterBroadcastUrl(url) ||
     isDirectMediaUrl(url) ||
-    isPodcastHost(url)
+    isPodcastHost(url) ||
+    isPdfUrl(url)
   );
 }
 

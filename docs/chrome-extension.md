@@ -92,7 +92,8 @@ The extension always sends the same request shape:
 The daemon decides the best pipeline:
 
 - YouTube / video / podcast / direct media URLs → prefer **URL** pipeline (transcripts, yt-dlp, Whisper, readability, …).
-- Normal articles with extracted text → prefer **page** pipeline (“what you see”).
+- PDF URLs (`.pdf` extension or `arxiv.org/pdf/...`) → **URL** pipeline with PDF fast path (daemon downloads the PDF, converts via `uvx markitdown`, then summarizes). Requires `uvx` installed or `UVX_PATH` set in `~/.summarize/daemon.json`.
+- Normal articles with extracted text → prefer **page** pipeline ("what you see").
 - Fallback: if the preferred path fails before output starts, try the other input (when available).
 
 ## Video Selection (Page vs Video)

@@ -22,6 +22,7 @@ Fast summaries from URLs, files, and media. Works in the terminal, a Chrome Side
 - Media-aware summaries: auto‑detect video/audio vs page content.
 - Streaming Markdown + metrics + cache‑aware status.
 - CLI supports URLs, files, podcasts, YouTube, audio/video, PDFs.
+- **PDF support in extension**: navigate to any PDF URL and click Summarize — daemon downloads and processes it server-side.
 
 ## Feature overview
 
@@ -112,19 +113,19 @@ if (pathname.startsWith("/v1/") && !authed) {
 
 **HTTP API routes** (defined in [`src/daemon/server.ts`](src/daemon/server.ts)):
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/health` | GET | Health check — no auth required. Returns `{ok, pid, version}` |
-| `/v1/ping` | GET | Auth verification — confirms Bearer token is valid |
-| `/v1/summarize` | POST | Start a summarization. Accepts `{url, text, title, model, length, ...}`. Returns `{ok, id}` with a session ID |
-| `/v1/summarize/{id}/events` | GET | **SSE stream** — subscribe to real-time summary events for a session |
-| `/v1/agent` | POST | Chat/agent requests from the extension (SSE or JSON response) |
-| `/v1/tools` | GET | Reports which local tools are available (`yt-dlp`, `ffmpeg`, `tesseract`) |
-| `/v1/models` | GET | Lists available LLM models based on configured API keys |
-| `/v1/logs` | GET | Tail daemon logs (for troubleshooting) |
-| `/v1/processes` | GET | List active/completed processing tasks |
-| `/v1/summarize/{id}/slides` | GET | Fetch extracted slide images for a session |
-| `/v1/slides/{sourceId}/{index}` | GET | Stable URL for individual slide images (survives session cleanup) |
+| Route                           | Method | Purpose                                                                                                       |
+| ------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------- |
+| `/health`                       | GET    | Health check — no auth required. Returns `{ok, pid, version}`                                                 |
+| `/v1/ping`                      | GET    | Auth verification — confirms Bearer token is valid                                                            |
+| `/v1/summarize`                 | POST   | Start a summarization. Accepts `{url, text, title, model, length, ...}`. Returns `{ok, id}` with a session ID |
+| `/v1/summarize/{id}/events`     | GET    | **SSE stream** — subscribe to real-time summary events for a session                                          |
+| `/v1/agent`                     | POST   | Chat/agent requests from the extension (SSE or JSON response)                                                 |
+| `/v1/tools`                     | GET    | Reports which local tools are available (`yt-dlp`, `ffmpeg`, `tesseract`)                                     |
+| `/v1/models`                    | GET    | Lists available LLM models based on configured API keys                                                       |
+| `/v1/logs`                      | GET    | Tail daemon logs (for troubleshooting)                                                                        |
+| `/v1/processes`                 | GET    | List active/completed processing tasks                                                                        |
+| `/v1/summarize/{id}/slides`     | GET    | Fetch extracted slide images for a session                                                                    |
+| `/v1/slides/{sourceId}/{index}` | GET    | Stable URL for individual slide images (survives session cleanup)                                             |
 
 **Streaming via SSE (Server-Sent Events):** When the extension requests a summary, the daemon creates a session and streams results back in real-time using SSE. Events are defined in [`src/shared/sse-events.ts`](src/shared/sse-events.ts):
 
@@ -255,7 +256,11 @@ Apple Silicon only (arm64).
 
 > **Extension + YouTube:** The extension fully supports YouTube video summarization. Navigate to any YouTube video and click Summarize — the daemon extracts the transcript server-side (via YouTube web API, yt-dlp, or Whisper) and summarizes it.
 >
-> **Extension limitation:** The extension cannot read PDFs rendered in the browser's built-in PDF viewer (e.g., `arxiv.org/pdf/...` links) or other embedded binary files. The PDF viewer is a separate browser component whose content is not exposed to the DOM. Workaround: use the HTML version of the page (e.g., `arxiv.org/abs/...` instead of `arxiv.org/pdf/...`), or use the CLI for PDFs and media.
+> **Extension + PDFs:** The extension supports PDF URLs (e.g., `arxiv.org/pdf/...`). PDF URLs are detected automatically and routed to the daemon, which downloads the PDF and converts it to text via `uvx markitdown` before summarizing. Requires `uvx` installed (see `--preprocess` flag) or `UVX_PATH` set in `~/.summarize/daemon.json`.
+
+PDF summarization from the Chrome extension (arxiv paper):
+
+![Summarize PDF in Chrome extension](docs/summarize_pdf.jpg)
 
 ### Quickstart
 
@@ -657,12 +662,12 @@ Precedence:
 
 **Auto model selection** (when no model is specified): tries candidates in order, uses the first one you have an API key for.
 
-| Content type | Candidate priority |
-|---|---|
+| Content type                          | Candidate priority                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------- |
 | Website, YouTube, text (≤200k tokens) | `google/gemini-3-flash-preview` → `openai/gpt-5-mini` → `anthropic/claude-sonnet-4-5` |
-| Website, YouTube, text (>200k tokens) | `xai/grok-4-fast-non-reasoning` → Google → OpenAI → Anthropic |
-| Video understanding | `google/gemini-3-flash-preview` |
-| Image, file/PDF | Google → OpenAI → Anthropic |
+| Website, YouTube, text (>200k tokens) | `xai/grok-4-fast-non-reasoning` → Google → OpenAI → Anthropic                         |
+| Video understanding                   | `google/gemini-3-flash-preview`                                                       |
+| Image, file/PDF                       | Google → OpenAI → Anthropic                                                           |
 
 If no API keys are set, falls back to CLI providers: `claude` → `gemini` → `codex` → `agent`. Customizable via `cli.autoFallback.order` in config. See `src/model-auto.ts` for the full rules.
 
@@ -828,6 +833,7 @@ pnpm check
 - [Media pipeline](docs/media.md)
 - [Config schema and precedence](docs/config.md)
 - [Chrome extension architecture](docs/chrome-extension.md)
+- [PDF extension support](docs/pdf-support-documentation.md)
 - [NVIDIA ONNX transcription](docs/nvidia-onnx-transcription.md)
 - [Docs index](docs/README.md)
 

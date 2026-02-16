@@ -40,7 +40,7 @@ Goal: exercise URL + file inputs, extraction + LLM summary paths, multiple model
 
 ### Remote files (LLM summary, 4)
 
-13. PDF URL: any public PDF report (model: gemini-3-flash)
+13. PDF URL: `https://arxiv.org/pdf/2507.11538` (model: gemini-3-flash; requires `uvx` for markitdown extraction)
 14. PNG URL: `https://upload.wikimedia.org/wikipedia/commons/7/70/Example.png` (model: gpt-5-mini)
 15. MP3 URL: any public MP3 sample (model: gemini-3-flash)
 16. CSV URL: any public CSV sample (model: gpt-5-mini)

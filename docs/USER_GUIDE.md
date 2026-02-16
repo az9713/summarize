@@ -27,25 +27,27 @@ Summarize works in two ways:
 
 You might wonder: "Why not just paste a URL into Claude, ChatGPT, or Claude Code and ask it to summarize?" For simple web pages, that works fine. Summarize is purpose-built for cases where general AI tools fall short:
 
-| Capability | Summarize | AI chatbot (Claude Code, ChatGPT, etc.) |
-|---|---|---|
-| **YouTube videos** | Extracts transcript via yt-dlp + Whisper, then summarizes | Cannot transcribe video audio |
-| **Podcasts / audio files** | Downloads and transcribes audio, then summarizes | Cannot process audio |
-| **PDFs** | Direct PDF text extraction and parsing | Limited or no PDF parsing from URLs |
-| **Video slide extraction** | Scene detection (ffmpeg) + OCR (tesseract) | Not available |
-| **Caching** | SQLite cache — same URL twice is instant and free | Every request costs tokens |
-| **Cost tracking** | Shows exact token usage and cost per summary | No per-request cost visibility |
-| **Batch processing** | `summarize "url1" "url2" "url3"` in one command | One at a time |
-| **Browser extension** | One-click summarize while browsing | Must switch to chat window |
-| **Multiple providers** | Switch between OpenAI, Google, Anthropic, xAI, free models | Locked to one provider |
-| **Length control** | Tuned presets: short/medium/long/xl/xxl | Prompt-dependent, less consistent |
+| Capability                 | Summarize                                                  | AI chatbot (Claude Code, ChatGPT, etc.) |
+| -------------------------- | ---------------------------------------------------------- | --------------------------------------- |
+| **YouTube videos**         | Extracts transcript via yt-dlp + Whisper, then summarizes  | Cannot transcribe video audio           |
+| **Podcasts / audio files** | Downloads and transcribes audio, then summarizes           | Cannot process audio                    |
+| **PDFs**                   | Direct PDF text extraction and parsing                     | Limited or no PDF parsing from URLs     |
+| **Video slide extraction** | Scene detection (ffmpeg) + OCR (tesseract)                 | Not available                           |
+| **Caching**                | SQLite cache — same URL twice is instant and free          | Every request costs tokens              |
+| **Cost tracking**          | Shows exact token usage and cost per summary               | No per-request cost visibility          |
+| **Batch processing**       | `summarize "url1" "url2" "url3"` in one command            | One at a time                           |
+| **Browser extension**      | One-click summarize while browsing                         | Must switch to chat window              |
+| **Multiple providers**     | Switch between OpenAI, Google, Anthropic, xAI, free models | Locked to one provider                  |
+| **Length control**         | Tuned presets: short/medium/long/xl/xxl                    | Prompt-dependent, less consistent       |
 
 **Use an AI chatbot when:**
+
 - You need a one-off summary of a simple web page
 - You're already in a chat session and want a quick answer
 - You want to ask follow-up questions about the content
 
 **Use Summarize when:**
+
 - The content is YouTube, podcasts, audio, video, or PDFs
 - You summarize URLs repeatedly (caching saves time and money)
 - You want cost control or need to compare models
@@ -93,6 +95,7 @@ Choose the option that works best for your system:
 **Option A: Using Homebrew (recommended for Apple Silicon Macs)**
 
 If you have Homebrew installed:
+
 ```bash
 brew install steipete/tap/summarize
 ```
@@ -118,6 +121,7 @@ npm install -g @steipete/summarize
 #### Linux
 
 First, install Node.js 22 or higher. You can use:
+
 - Your package manager (apt, yum, etc.)
 - [Node Version Manager (nvm)](https://github.com/nvm-sh/nvm)
 
@@ -131,12 +135,12 @@ npm install -g @steipete/summarize
 
 Summarize works out of the box for web pages and text. For **audio, video, YouTube, and podcasts**, it relies on optional local tools:
 
-| Tool | What it does in Summarize | Required for |
-|------|---------------------------|--------------|
-| **ffmpeg** | Transcodes audio/video to MP3 for transcription. Splits large files into segments. Detects scene changes to extract slides from videos. `ffprobe` (bundled with ffmpeg) measures media duration for progress bars. | Audio/video transcription, slide extraction |
-| **Whisper** (whisper.cpp) | Converts speech to text locally — no API key or cloud service needed. Summarize feeds it audio (via ffmpeg) and gets back a text transcript that the LLM then summarizes. | Free local transcription (alternative: OpenAI/Groq/FAL cloud APIs) |
-| **yt-dlp** | Downloads audio/video from YouTube and other sites. Used when YouTube's web transcript API has no captions available. | YouTube videos without captions, slide extraction |
-| **tesseract** | OCR — extracts text from slide screenshot images produced by ffmpeg scene detection. | Slide text extraction (optional) |
+| Tool                      | What it does in Summarize                                                                                                                                                                                          | Required for                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| **ffmpeg**                | Transcodes audio/video to MP3 for transcription. Splits large files into segments. Detects scene changes to extract slides from videos. `ffprobe` (bundled with ffmpeg) measures media duration for progress bars. | Audio/video transcription, slide extraction                        |
+| **Whisper** (whisper.cpp) | Converts speech to text locally — no API key or cloud service needed. Summarize feeds it audio (via ffmpeg) and gets back a text transcript that the LLM then summarizes.                                          | Free local transcription (alternative: OpenAI/Groq/FAL cloud APIs) |
+| **yt-dlp**                | Downloads audio/video from YouTube and other sites. Used when YouTube's web transcript API has no captions available.                                                                                              | YouTube videos without captions, slide extraction                  |
+| **tesseract**             | OCR — extracts text from slide screenshot images produced by ffmpeg scene detection.                                                                                                                               | Slide text extraction (optional)                                   |
 
 **The transcription pipeline:**
 
@@ -169,12 +173,14 @@ pip install yt-dlp
 ```
 
 **If you don't install these tools:**
+
 - Web pages, articles, and text files work normally — no extra tools needed
 - YouTube videos with existing captions still work (transcript fetched via web API)
-- YouTube videos *without* captions, podcasts, and local audio/video files will fail transcription
+- YouTube videos _without_ captions, podcasts, and local audio/video files will fail transcription
 - Slide extraction won't be available
 
 **Cloud alternatives to local Whisper** (no local install needed, but requires API keys):
+
 - OpenAI Whisper API: set `OPENAI_API_KEY`
 - Groq: set `GROQ_API_KEY`
 - FAL: set `FAL_KEY`
@@ -263,6 +269,7 @@ summarize refresh-free --set-default
 ```
 
 This command:
+
 - Tests which free models are working
 - Picks the best performing ones
 - Sets them as your default
@@ -308,11 +315,13 @@ Add it to your config file at `~/.summarize/config.json`:
 Or set it as an environment variable:
 
 **macOS/Linux:**
+
 ```bash
 export OPENAI_API_KEY="sk-YOUR-KEY-HERE"
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 $env:OPENAI_API_KEY="sk-YOUR-KEY-HERE"
 ```
@@ -385,6 +394,7 @@ If you have the Claude CLI, Gemini CLI, or Codex installed and authenticated, Su
 #### Check if you have a CLI provider installed
 
 Try running one of these:
+
 ```bash
 claude --version
 gemini --version
@@ -414,21 +424,23 @@ When you run Summarize **without specifying `--model` or `--cli`**, it uses **au
 
 **Priority order for websites, YouTube, and text** (under 50k tokens):
 
-| Priority | Model | Required API key |
-|----------|-------|------------------|
-| 1st | `google/gemini-3-flash-preview` | `GOOGLE_GENERATIVE_AI_API_KEY` |
-| 2nd | `openai/gpt-5-mini` | `OPENAI_API_KEY` |
-| 3rd | `anthropic/claude-sonnet-4-5` | `ANTHROPIC_API_KEY` |
+| Priority | Model                           | Required API key               |
+| -------- | ------------------------------- | ------------------------------ |
+| 1st      | `google/gemini-3-flash-preview` | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| 2nd      | `openai/gpt-5-mini`             | `OPENAI_API_KEY`               |
+| 3rd      | `anthropic/claude-sonnet-4-5`   | `ANTHROPIC_API_KEY`            |
 
 Summarize tries each candidate in order and uses the **first one you have an API key for**. For example, if you only have `OPENAI_API_KEY` set, it will use `openai/gpt-5-mini`.
 
 **Special cases:**
+
 - **Video understanding**: prefers `google/gemini-3-flash-preview` (best video support)
 - **Images**: prefers Google, then OpenAI, then Anthropic
 - **PDFs/files**: prefers Google (best PDF support), then OpenAI, then Anthropic
 - **Very large content** (200k+ tokens): tries `xai/grok-4-fast-non-reasoning` first (largest context window)
 
 **If no API keys are set at all**, Summarize falls back to CLI providers in this order:
+
 1. `claude` (Claude CLI)
 2. `gemini` (Gemini CLI)
 3. `codex` (OpenAI Codex CLI)
@@ -452,12 +464,12 @@ summarize "https://example.com" --cli claude
 
 These are **two different ways** to reach an LLM:
 
-| | `--model auto` (default) | `--cli claude` |
-|---|---|---|
+|                          | `--model auto` (default)                                           | `--cli claude`                                                  |
+| ------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------- |
 | **How it calls the LLM** | Direct HTTP API call (e.g., `api.openai.com`, `api.anthropic.com`) | Shells out to the `claude` CLI binary installed on your machine |
-| **Authentication** | API key from env var (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) | The Claude CLI's own login session |
-| **Which model** | First available by priority (Google → OpenAI → Anthropic) | Claude Sonnet (default for `--cli claude`) |
-| **Billing** | Per-token API pricing from your provider | Your Claude subscription plan |
+| **Authentication**       | API key from env var (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`) | The Claude CLI's own login session                              |
+| **Which model**          | First available by priority (Google → OpenAI → Anthropic)          | Claude Sonnet (default for `--cli claude`)                      |
+| **Billing**              | Per-token API pricing from your provider                           | Your Claude subscription plan                                   |
 
 **Example:** If your only API key is `ANTHROPIC_API_KEY`, then both of these commands end up using Claude Sonnet:
 
@@ -472,6 +484,7 @@ summarize "https://example.com" --cli claude
 The summary output is essentially the same — same model, same content. The difference is the billing path and how the request reaches Anthropic's servers.
 
 **When to use which:**
+
 - **`--model auto`** (or `--model provider/model`): when you have API keys and want direct API access with per-token billing
 - **`--cli claude`**: when you have the Claude CLI installed and want to use your Claude subscription instead of API billing
 - Other CLI options: `--cli gemini` (Gemini CLI), `--cli codex` (OpenAI Codex CLI)
@@ -506,6 +519,7 @@ You'll see a series of steps:
 ### Understanding the output
 
 After the summary, you'll see some metrics:
+
 - **Tokens**: How much text was processed (input) and generated (output)
 - **Time**: How long each step took
 - **Cost**: Estimated cost (if using a paid API)
@@ -526,11 +540,13 @@ summarize "https://www.bbc.com/news/technology"
 ```
 
 **Why this is useful:**
+
 - Quickly catch up on current events
 - Get the key facts from long articles
 - Save time while staying informed
 
 **Tip:** Use `--length short` for very quick summaries:
+
 ```bash
 summarize "https://www.bbc.com/news/technology" --length short
 ```
@@ -544,11 +560,13 @@ summarize "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 **What happens:**
+
 1. Summarize extracts the video transcript (either official captions or generated via speech recognition)
 2. The transcript is sent to the AI
 3. You get a summary of what the video covers
 
 **Why this is useful:**
+
 - Decide if a video is worth watching
 - Review key points from educational videos
 - Get information from videos when you can't watch with sound
@@ -567,6 +585,7 @@ summarize "/path/to/document.pdf" --model google/gemini-3-flash-preview
 Google's Gemini models have excellent PDF support and can understand document structure, tables, and images within PDFs.
 
 **Examples:**
+
 ```bash
 # Local file
 summarize "~/Documents/research-paper.pdf" --model google/gemini-3-flash-preview
@@ -576,8 +595,10 @@ summarize "https://example.com/report.pdf" --model google/gemini-3-flash-preview
 ```
 
 **Tips:**
+
 - For very long PDFs, use `--length long` to get more detail
 - Use `--extract` to see the raw text extracted from the PDF
+- The browser extension also supports PDF URLs — just navigate to a PDF and click Summarize
 
 ### Use Case 4: Get Different Summary Lengths
 
@@ -601,6 +622,7 @@ summarize "https://example.com" --length xxl
 ```
 
 **When to use each:**
+
 - **short**: Quick overview, checking if content is relevant
 - **medium**: Default, good for most articles
 - **long**: Detailed understanding, educational content
@@ -608,6 +630,7 @@ summarize "https://example.com" --length xxl
 - **xxl**: Maximum detail, book chapters, long documents
 
 You can also specify exact character counts:
+
 ```bash
 summarize "https://example.com" --length 3000
 ```
@@ -628,11 +651,13 @@ summarize "https://feeds.npr.org/500005/podcast.xml"
 ```
 
 **What happens:**
+
 1. Summarize downloads the podcast audio file
 2. It transcribes the audio to text (using Whisper AI)
 3. The transcript is summarized
 
 **Why this is useful:**
+
 - Decide which episodes to listen to
 - Review key points from episodes you've heard
 - Get information from podcasts when you can't listen
@@ -658,11 +683,13 @@ summarize "https://example.com" --lang fr
 ```
 
 **Supported formats:**
+
 - Language names: `spanish`, `japanese`, `german`, `french`, `chinese`, etc.
 - Short codes: `es`, `ja`, `de`, `fr`, `zh`, etc.
 - Auto-detect (default): `--lang auto` (matches source language)
 
 **Use cases:**
+
 - Practice a foreign language
 - Get information from foreign language sources in your language
 - Share summaries with people who speak different languages
@@ -680,12 +707,14 @@ summarize "https://example.com" --extract --format md
 ```
 
 **Why this is useful:**
+
 - Remove ads and clutter from articles
 - Save articles in a clean format
 - Copy text for use elsewhere
 - See what content would be summarized before running the AI
 
 **Example:** Extract a recipe without all the blog content:
+
 ```bash
 summarize "https://foodblog.com/chocolate-cake-recipe" --extract --format md > recipe.md
 ```
@@ -695,16 +724,19 @@ summarize "https://foodblog.com/chocolate-cake-recipe" --extract --format md > r
 Summarize text you've copied without saving it to a file first.
 
 **macOS:**
+
 ```bash
 pbpaste | summarize -
 ```
 
 **Linux:**
+
 ```bash
 xclip -selection clipboard -o | summarize -
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 Get-Clipboard | summarize -
 ```
@@ -713,11 +745,13 @@ Get-Clipboard | summarize -
 The dash tells Summarize to read from "standard input" (stdin) - text piped into it from another command.
 
 **Use cases:**
+
 - Summarize text you've copied from anywhere
 - Process output from other commands
 - Quick summaries without creating files
 
 **Example workflow:**
+
 1. Read an email
 2. Copy the entire message
 3. Run `pbpaste | summarize -`
@@ -739,6 +773,7 @@ summarize "https://www.youtube.com/watch?v=..." --slides --slides-max 12
 ```
 
 **What happens:**
+
 1. Summarize detects scene changes in the video
 2. Extracts screenshot images at key moments
 3. Optionally runs OCR to extract text from slides
@@ -746,12 +781,14 @@ summarize "https://www.youtube.com/watch?v=..." --slides --slides-max 12
 5. Saves slide images to a local folder
 
 **Why this is useful:**
+
 - Review presentation slides without watching the video
 - Extract diagrams and visual content
 - Get timestamped references to important moments
 - Create study materials from educational videos
 
 **Requirements:**
+
 - `yt-dlp` (for video download)
 - `ffmpeg` (for scene detection)
 - `tesseract` (for OCR, optional)
@@ -780,6 +817,7 @@ summarize "https://example.com" --model free
 ```
 
 **How to choose:**
+
 - **Speed matters**: `openai/gpt-5-mini`, `google/gemini-3-flash-preview`, `xai/grok-4-fast-non-reasoning`
 - **Quality matters**: `anthropic/claude-sonnet-4-5`, `openai/gpt-5`
 - **PDFs**: `google/gemini-3-flash-preview` (best PDF support)
@@ -805,12 +843,14 @@ summarize "https://example.com" --model auto
 ```
 
 **What `refresh-free` does:**
+
 1. Fetches the list of free models from OpenRouter
 2. Tests each model to see if it's working
 3. Selects the best performing free models
 4. Saves them as the "free" preset in your config
 
 **Why run this:**
+
 - Free models change over time
 - Some free models stop working
 - This keeps your free option up to date
@@ -833,21 +873,25 @@ summarize "/path/to/tutorial.mov"
 ```
 
 **Supported formats:**
+
 - Audio: MP3, WAV, M4A, OGG, FLAC
 - Video: MP4, MOV, WEBM, MKV
 
 **What happens:**
+
 1. Summarize transcribes the audio using Whisper AI
 2. The transcript is sent to your chosen AI model
 3. You get a summary of what was said
 
 **Use cases:**
+
 - Summarize meeting recordings
 - Review lecture content
 - Extract key points from interviews
 - Process voice memos
 
 **Requirements:**
+
 - Local Whisper (recommended): Install `whisper.cpp`
 - Or OpenAI API key (uses OpenAI's Whisper API)
 - Or FAL API key (alternative transcription service)
@@ -862,20 +906,13 @@ The browser extension lets you summarize any web page with a single click from C
 
 > **YouTube support:** The extension fully supports YouTube video summarization. Just navigate to any YouTube video and click Summarize — the daemon extracts the transcript server-side using YouTube's web API, yt-dlp, or Whisper, then sends it to the LLM for summarization. No extra setup needed beyond the daemon.
 >
-> **Limitation — PDFs and binary files:** The extension **cannot** read:
-> - PDFs rendered in the browser's built-in PDF viewer (e.g., `arxiv.org/pdf/...` links)
-> - Embedded binary files (images, audio, video files)
-> - Content behind JavaScript-heavy rendering that doesn't expose text to the DOM
+> **PDF support:** The extension supports PDF URLs (e.g., `arxiv.org/pdf/...`). Navigate to any PDF and click Summarize — the daemon downloads the PDF and converts it to text via `uvx markitdown` before summarizing. Requires `uvx` installed (`pip install uv` or `brew install uv`). On Windows, set `UVX_PATH` in `~/.summarize/daemon.json` to the full path of `uvx.exe`, then restart the daemon.
 >
-> The browser's PDF viewer is a separate component — the extension can only access the HTML DOM, not the PDF content inside it. For YouTube, the URL alone is enough for the daemon to extract the transcript; for PDFs, the extension would need to download and forward the file, which it doesn't currently do.
+> **Limitation — other binary files:** The extension cannot read embedded binary files (images, audio rendered inline) or content behind JavaScript-heavy rendering that doesn't expose text to the DOM. Use the CLI for those:
 >
-> **Workarounds for PDFs:**
-> - Navigate to the HTML version of the page (e.g., use `arxiv.org/abs/...` instead of `arxiv.org/pdf/...`)
-> - Use the CLI for PDFs and other non-HTML content:
->   ```bash
->   summarize "https://arxiv.org/pdf/2507.11538" --model google/gemini-3-flash-preview
->   summarize "/path/to/document.pdf" --model google/gemini-3-flash-preview
->   ```
+> ```bash
+> summarize "/path/to/document.pdf" --model google/gemini-3-flash-preview
+> ```
 
 ### 6.1 Install the Extension
 
@@ -897,6 +934,7 @@ The browser extension needs a local "daemon" (background service) to work. This 
 #### Why do you need a daemon?
 
 The daemon runs on your computer (localhost only) and:
+
 - Extracts content from web pages
 - Downloads and transcribes media files
 - Performs OCR on images
@@ -913,6 +951,7 @@ Don't worry - it only runs on your local computer and requires a security token.
 #### Step 2: Get your installation token
 
 When you first open the extension, you'll see:
+
 - A unique security token (like `abc123def456`)
 - An installation command
 
@@ -927,11 +966,13 @@ summarize daemon install --token abc123def456
 Replace `abc123def456` with the actual token shown in your extension.
 
 **What this does:**
+
 - Installs a background service
 - Configures it to start automatically
 - Sets up the security token for communication
 
 **Auto-start configuration:**
+
 - **macOS**: Uses `launchd` (system service manager)
 - **Linux**: Uses `systemd` (user service)
 - **Windows**: Uses Task Scheduler
@@ -974,6 +1015,7 @@ pnpm summarize daemon status
 The `--dev` flag tells the daemon to run from your local source code so your changes take effect.
 
 After making code changes, rebuild and restart:
+
 ```bash
 pnpm -C apps/chrome-extension build        # Rebuild extension
 # Then click the reload icon on chrome://extensions
@@ -998,19 +1040,32 @@ Enable auto-summarize in the extension settings to get summaries automatically w
 #### YouTube videos
 
 When you're on a YouTube page:
+
 1. You'll see a "Video + Slides" option
 2. Click it to extract video slides and transcript
 3. Click slides to seek to that timestamp in the video
 4. Toggle between OCR text and transcript
 
+#### PDF documents
+
+When you navigate to a PDF URL (e.g., `arxiv.org/pdf/...`):
+
+1. Click Summarize — the extension detects the PDF automatically
+2. You'll see "Downloading PDF…" as the daemon fetches and converts the file
+3. The summary streams in once processing is complete
+
+No need to use the HTML version of the page or switch to the CLI.
+
 #### Chat mode
 
 After generating a summary:
+
 1. Type a question in the chat box
 2. Ask follow-up questions about the content
 3. Get detailed explanations of specific points
 
 **Example questions:**
+
 - "Can you explain the second point in more detail?"
 - "What are the main arguments against this?"
 - "Summarize this in 3 bullet points"
@@ -1018,6 +1073,7 @@ After generating a summary:
 ### 6.4 Extension Settings
 
 Click the settings icon in the extension to configure:
+
 - **Default model**: Which AI model to use
 - **Summary length**: Short, medium, long, etc.
 - **Auto-summarize**: Automatically summarize new pages
@@ -1032,6 +1088,7 @@ Summarize uses a configuration file to store your preferences and API keys.
 ### 7.1 Config File Location
 
 The configuration file is located at:
+
 - **macOS/Linux**: `~/.summarize/config.json`
 - **Windows**: `C:\Users\YourName\.summarize\config.json`
 
@@ -1098,6 +1155,7 @@ Available themes: `aurora`, `ember`, `moss`, `mono`
 ```
 
 **What this does:**
+
 - Caches downloaded media files for 7 days
 - Limits cache size to 2GB
 - Speeds up repeated summaries of the same media
@@ -1142,6 +1200,7 @@ Available themes: `aurora`, `ember`, `moss`, `mono`
 **Method 1: Using a text editor**
 
 1. Open the file in any text editor:
+
    ```bash
    # macOS
    open ~/.summarize/config.json
@@ -1175,6 +1234,7 @@ nano ~/.summarize/config.json
 ### Problem: "No API key found"
 
 **Solution:**
+
 1. Make sure you've set up an API key (see Part 3)
 2. Check that your config file has the right format:
    ```bash
@@ -1188,6 +1248,7 @@ nano ~/.summarize/config.json
 ### Problem: "Command not found: summarize"
 
 **Solution:**
+
 1. Make sure you installed globally with `-g`:
    ```bash
    npm install -g @steipete/summarize
@@ -1203,6 +1264,7 @@ nano ~/.summarize/config.json
 **Error:** "Failed to fetch" or "Daemon unreachable"
 
 **Solution:**
+
 1. Check daemon status:
    ```bash
    summarize daemon status
@@ -1212,6 +1274,7 @@ nano ~/.summarize/config.json
    summarize daemon start
    ```
 3. Check the logs for errors:
+
    ```bash
    # macOS/Linux
    cat ~/.summarize/logs/daemon.err.log
@@ -1219,6 +1282,7 @@ nano ~/.summarize/config.json
    # Windows
    type %USERPROFILE%\.summarize\logs\daemon.err.log
    ```
+
 4. Reinstall if needed:
    ```bash
    summarize daemon install --token YOUR-TOKEN
@@ -1229,6 +1293,7 @@ nano ~/.summarize/config.json
 **Error:** "Receiving end does not exist"
 
 **Solution:**
+
 1. Open Chrome extension settings
 2. Find Summarize
 3. Set "Site access" to "On all sites"
@@ -1237,6 +1302,7 @@ nano ~/.summarize/config.json
 ### Problem: "Model not available" or rate limits
 
 **Solution:**
+
 1. If using free models, they may be temporarily unavailable
 2. Refresh your free models:
    ```bash
@@ -1260,6 +1326,7 @@ nano ~/.summarize/config.json
 ### Problem: Bad or incomplete summaries
 
 **Solution:**
+
 1. Try a different model:
    ```bash
    summarize "URL" --model anthropic/claude-sonnet-4-5
@@ -1276,6 +1343,7 @@ nano ~/.summarize/config.json
 ### Problem: YouTube video transcription fails
 
 **Solution:**
+
 1. Check if the video has captions (YouTube should work automatically)
 2. For videos without captions, you need transcription tools:
    - Install `yt-dlp`: `brew install yt-dlp` (macOS) or see [yt-dlp.org](https://github.com/yt-dlp/yt-dlp)
@@ -1292,6 +1360,7 @@ nano ~/.summarize/config.json
 ### Problem: PDF summarization fails
 
 **Solution:**
+
 1. Use Google's Gemini model (best PDF support):
    ```bash
    summarize "file.pdf" --model google/gemini-3-flash-preview
@@ -1302,13 +1371,20 @@ nano ~/.summarize/config.json
    ```
 3. Some encrypted or scanned PDFs may not work well
 
-### Problem: Browser extension extracts only a few words from a PDF
+### Problem: Browser extension fails to summarize a PDF
 
-The browser extension cannot read PDFs rendered in Chrome/Firefox's built-in PDF viewer. The PDF viewer is a separate embedded component — the extension can only access the HTML DOM, not the PDF content inside it.
+The extension detects PDF URLs and routes them to the daemon for server-side processing. If the summary fails or shows only a few words, the daemon likely can't find `uvx markitdown`.
 
 **Solution:**
-1. Navigate to the HTML version of the page (e.g., `arxiv.org/abs/...` instead of `arxiv.org/pdf/...`)
-2. Or use the CLI instead:
+
+1. Install `uvx`: `pip install uv` (or `brew install uv` on macOS)
+2. On Windows, set `UVX_PATH` in `~/.summarize/daemon.json`:
+   ```json
+   { "env": { "UVX_PATH": "/path/to/uvx.exe" } }
+   ```
+3. Restart the daemon: `summarize daemon restart`
+4. Clear the cache if a bad result was cached: delete `~/.summarize/cache.sqlite*`
+5. If the issue persists, use the CLI:
    ```bash
    summarize "https://arxiv.org/pdf/2507.11538" --model google/gemini-3-flash-preview
    ```
@@ -1318,6 +1394,7 @@ The browser extension cannot read PDFs rendered in Chrome/Firefox's built-in PDF
 If you're still having issues:
 
 1. **Check the logs**:
+
    ```bash
    # CLI verbose output
    summarize "URL" --verbose
@@ -1348,91 +1425,91 @@ summarize <input> [flags]
 
 ### Input Types
 
-| Input | Example |
-|-------|---------|
-| Web URL | `"https://example.com"` |
-| YouTube | `"https://youtube.com/watch?v=..."` |
-| Local file | `"/path/to/file.pdf"` |
-| Stdin | `-` (pipe content in) |
+| Input      | Example                             |
+| ---------- | ----------------------------------- |
+| Web URL    | `"https://example.com"`             |
+| YouTube    | `"https://youtube.com/watch?v=..."` |
+| Local file | `"/path/to/file.pdf"`               |
+| Stdin      | `-` (pipe content in)               |
 
 ### Essential Flags
 
-| Flag | Description | Example |
-|------|-------------|---------|
-| `--model <id>` | Choose AI model | `--model openai/gpt-5-mini` |
-| `--length <size>` | Summary length | `--length short` |
-| `--lang <language>` | Output language | `--lang spanish` |
-| `--extract` | Extract content only (no summary) | `--extract` |
-| `--format <type>` | Output format (text or md) | `--format md` |
-| `--help` | Show all available options | `--help` |
+| Flag                | Description                       | Example                     |
+| ------------------- | --------------------------------- | --------------------------- |
+| `--model <id>`      | Choose AI model                   | `--model openai/gpt-5-mini` |
+| `--length <size>`   | Summary length                    | `--length short`            |
+| `--lang <language>` | Output language                   | `--lang spanish`            |
+| `--extract`         | Extract content only (no summary) | `--extract`                 |
+| `--format <type>`   | Output format (text or md)        | `--format md`               |
+| `--help`            | Show all available options        | `--help`                    |
 
 ### Length Options
 
-| Option | Approx. Characters | Best For |
-|--------|-------------------|----------|
-| `short` | ~900 | Quick overview |
-| `medium` | ~1,800 | Standard articles |
-| `long` | ~4,200 | Detailed analysis |
-| `xl` | ~9,000 | Research papers |
-| `xxl` | ~17,000 | Books, long documents |
-| `3000` | Exactly 3000 | Custom length |
+| Option   | Approx. Characters | Best For              |
+| -------- | ------------------ | --------------------- |
+| `short`  | ~900               | Quick overview        |
+| `medium` | ~1,800             | Standard articles     |
+| `long`   | ~4,200             | Detailed analysis     |
+| `xl`     | ~9,000             | Research papers       |
+| `xxl`    | ~17,000            | Books, long documents |
+| `3000`   | Exactly 3000       | Custom length         |
 
 ### Model Examples
 
-| Provider | Model ID | Best For |
-|----------|----------|----------|
-| OpenAI | `openai/gpt-5-mini` | Fast, cheap, general use |
-| OpenAI | `openai/gpt-5` | Highest quality |
-| Google | `google/gemini-3-flash-preview` | PDFs, speed |
-| Anthropic | `anthropic/claude-sonnet-4-5` | Nuanced analysis |
-| xAI | `xai/grok-4-fast-non-reasoning` | Very fast |
-| OpenRouter | `free` | Free models |
-| Auto | `auto` (default) | Picks first available by priority: Google → OpenAI → Anthropic → xAI |
+| Provider   | Model ID                        | Best For                                                             |
+| ---------- | ------------------------------- | -------------------------------------------------------------------- |
+| OpenAI     | `openai/gpt-5-mini`             | Fast, cheap, general use                                             |
+| OpenAI     | `openai/gpt-5`                  | Highest quality                                                      |
+| Google     | `google/gemini-3-flash-preview` | PDFs, speed                                                          |
+| Anthropic  | `anthropic/claude-sonnet-4-5`   | Nuanced analysis                                                     |
+| xAI        | `xai/grok-4-fast-non-reasoning` | Very fast                                                            |
+| OpenRouter | `free`                          | Free models                                                          |
+| Auto       | `auto` (default)                | Picks first available by priority: Google → OpenAI → Anthropic → xAI |
 
 ### Language Options
 
-| Format | Examples |
-|--------|----------|
-| Full name | `english`, `spanish`, `japanese`, `german` |
-| Short code | `en`, `es`, `ja`, `de` |
-| Auto-detect | `auto` (default) |
+| Format      | Examples                                   |
+| ----------- | ------------------------------------------ |
+| Full name   | `english`, `spanish`, `japanese`, `german` |
+| Short code  | `en`, `es`, `ja`, `de`                     |
+| Auto-detect | `auto` (default)                           |
 
 ### YouTube & Media Flags
 
-| Flag | Description |
-|------|-------------|
-| `--youtube auto` | Enable YouTube transcript extraction |
-| `--slides` | Extract video slides |
-| `--slides-ocr` | Add OCR text recognition |
-| `--slides-max <n>` | Maximum slides to extract |
+| Flag               | Description                          |
+| ------------------ | ------------------------------------ |
+| `--youtube auto`   | Enable YouTube transcript extraction |
+| `--slides`         | Extract video slides                 |
+| `--slides-ocr`     | Add OCR text recognition             |
+| `--slides-max <n>` | Maximum slides to extract            |
 
 ### Advanced Flags
 
-| Flag | Description |
-|------|-------------|
-| `--verbose` | Show detailed debug information |
-| `--json` | Output as JSON (for scripts) |
-| `--plain` | Plain text output (no formatting) |
-| `--no-cache` | Don't use cached summaries |
-| `--timeout <time>` | Set timeout (e.g., `30s`, `2m`) |
+| Flag               | Description                              |
+| ------------------ | ---------------------------------------- |
+| `--verbose`        | Show detailed debug information          |
+| `--json`           | Output as JSON (for scripts)             |
+| `--plain`          | Plain text output (no formatting)        |
+| `--no-cache`       | Don't use cached summaries               |
+| `--timeout <time>` | Set timeout (e.g., `30s`, `2m`)          |
 | `--cli <provider>` | Use CLI provider (claude, gemini, codex) |
 
 ### Daemon Commands
 
-| Command | Description |
-|---------|-------------|
-| `summarize daemon install --token <token>` | Install daemon |
-| `summarize daemon start` | Start daemon |
-| `summarize daemon stop` | Stop daemon |
-| `summarize daemon status` | Check daemon status |
-| `summarize daemon uninstall` | Remove daemon |
+| Command                                    | Description         |
+| ------------------------------------------ | ------------------- |
+| `summarize daemon install --token <token>` | Install daemon      |
+| `summarize daemon start`                   | Start daemon        |
+| `summarize daemon stop`                    | Stop daemon         |
+| `summarize daemon status`                  | Check daemon status |
+| `summarize daemon uninstall`               | Remove daemon       |
 
 ### Utility Commands
 
-| Command | Description |
-|---------|-------------|
-| `summarize --version` | Show version |
-| `summarize --help` | Show help |
+| Command                  | Description        |
+| ------------------------ | ------------------ |
+| `summarize --version`    | Show version       |
+| `summarize --help`       | Show help          |
 | `summarize refresh-free` | Update free models |
 
 ### Complete Examples

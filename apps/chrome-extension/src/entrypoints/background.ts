@@ -1,5 +1,5 @@
 import type { AssistantMessage, Message } from "@mariozechner/pi-ai";
-import { shouldPreferUrlMode } from "@steipete/summarize-core/content/url";
+import { isPdfUrl, shouldPreferUrlMode } from "@steipete/summarize-core/content/url";
 import { defineBackground } from "wxt/utils/define-background";
 import { parseSseEvent, type SseSlidesData } from "../../../../src/shared/sse-events.js";
 import {
@@ -857,7 +857,9 @@ export default defineBackground(() => {
     const wantsSlides = settings.slidesEnabled && shouldPreferUrlMode(tab.url);
     const urlStatusLabel = wantsSlides
       ? "Extracting video + thumbnails…"
-      : "Extracting video transcript…";
+      : isPdfUrl(tab.url)
+        ? "Downloading PDF…"
+        : "Extracting video transcript…";
     sendStatus(session, urlStatusLabel);
     const extractTimeoutMs = wantsSlides ? 6 * 60_000 : 3 * 60_000;
     const extractController = new AbortController();
@@ -1147,13 +1149,15 @@ export default defineBackground(() => {
 
     const prefersUrlMode = Boolean(tab.url && shouldPreferUrlMode(tab.url));
     const wantsUrlFastPath =
-      Boolean(tab.url && isYouTubeWatchUrl(tab.url)) &&
+      Boolean(tab.url && (isYouTubeWatchUrl(tab.url) || isPdfUrl(tab.url))) &&
       opts?.inputMode !== "page" &&
       prefersUrlMode;
 
     let extracted: ExtractResponse & { ok: true };
     if (wantsUrlFastPath) {
-      sendStatus(session, `Fetching transcript… (${reason})`);
+      const fastPathLabel =
+        tab.url && isPdfUrl(tab.url) ? "Downloading PDF" : "Fetching transcript";
+      sendStatus(session, `${fastPathLabel}… (${reason})`);
       logPanel("extract:url-fastpath:start", { reason, tabId: tab.id });
       try {
         const res = await fetch("http://127.0.0.1:8787/v1/summarize", {

@@ -1,5 +1,6 @@
 import type { CacheState } from "../cache.js";
 import type { RunMetricsReport } from "../costs.js";
+import type { ExecFileFn } from "../markitdown.js";
 import type { RunOverrides } from "../run/run-settings.js";
 import type {
   SlideExtractionResult,
@@ -7,7 +8,15 @@ import type {
   SlideSettings,
   SlideSourceKind,
 } from "../slides/index.js";
-import { type ExtractedLinkContent, isYouTubeUrl, type MediaCache } from "../content/index.js";
+import {
+  type ExtractedLinkContent,
+  isPdfUrl,
+  isYouTubeUrl,
+  type MediaCache,
+} from "../content/index.js";
+import { convertToMarkdownWithMarkitdown } from "../markitdown.js";
+import { execFileTracked } from "../processes.js";
+import { hasUvxCli } from "../run/env.js";
 import { buildFinishLineVariants, buildLengthPartsForFinishLine } from "../run/finish-line.js";
 import { deriveExtractionUi } from "../run/flows/url/extract.js";
 import { runUrlFlow } from "../run/flows/url/flow.js";
@@ -397,6 +406,125 @@ export async function streamSummaryForUrl({
   });
 
   writeStatus?.("Extracting…");
+
+  // PDF URLs: download bytes and convert via markitdown, then summarize directly
+  if (isPdfUrl(input.url) && hasUvxCli(env)) {
+    writeStatus?.("Downloading PDF…");
+    const response = await fetchImpl(input.url, { redirect: "follow" });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF (status ${response.status})`);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const pdfMarkdown = await convertToMarkdownWithMarkitdown({
+      bytes,
+      filenameHint: null,
+      mediaTypeHint: "application/pdf",
+      uvxCommand: env.UVX_PATH?.trim() || null,
+      timeoutMs: 120_000,
+      env,
+      execFileImpl: execFileTracked as unknown as ExecFileFn,
+    });
+    const pdfContent = pdfMarkdown.trim();
+
+    const extracted: ExtractedLinkContent = {
+      url: input.url,
+      title: input.title,
+      description: null,
+      siteName: guessSiteName(input.url),
+      content: pdfContent,
+      truncated: false,
+      totalCharacters: pdfContent.length,
+      wordCount: countWords(pdfContent),
+      transcriptCharacters: null,
+      transcriptLines: null,
+      transcriptWordCount: null,
+      transcriptSource: null,
+      transcriptionProvider: null,
+      transcriptMetadata: null,
+      transcriptSegments: null,
+      transcriptTimedText: null,
+      mediaDurationSeconds: null,
+      video: null,
+      isVideoOnly: false,
+      diagnostics: {
+        strategy: "html",
+        firecrawl: {
+          attempted: false,
+          used: false,
+          cacheMode: cache.mode,
+          cacheStatus: "unknown",
+        },
+        markdown: {
+          requested: false,
+          used: true,
+          provider: null,
+        },
+        transcript: {
+          cacheMode: cache.mode,
+          cacheStatus: "unknown",
+          textProvided: false,
+          provider: null,
+          attemptedProviders: [],
+        },
+      } satisfies ExtractedLinkContent["diagnostics"],
+    };
+
+    hooks?.onExtracted?.(extracted);
+    sink.writeMeta?.({
+      inputSummary: formatInputSummary({
+        kindLabel: null,
+        durationSeconds: null,
+        words: extracted.wordCount,
+        characters: extracted.totalCharacters,
+      }),
+    });
+    writeStatus?.("Summarizing…");
+
+    const extractionUi = deriveExtractionUi(extracted);
+    const prompt = buildUrlPrompt({
+      extracted,
+      outputLanguage: ctx.flags.outputLanguage,
+      lengthArg: ctx.flags.lengthArg,
+      promptOverride: ctx.flags.promptOverride ?? null,
+      lengthInstruction: ctx.flags.lengthInstruction ?? null,
+      languageInstruction: ctx.flags.languageInstruction ?? null,
+    });
+
+    await summarizeExtractedUrl({
+      ctx,
+      url: input.url,
+      extracted,
+      extractionUi,
+      prompt,
+      effectiveMarkdownMode: "off",
+      transcriptionCostLabel: null,
+      onModelChosen: ctx.hooks.onModelChosen ?? null,
+    });
+
+    const report = await ctx.hooks.buildReport();
+    const costUsd = await ctx.hooks.estimateCostUsd();
+    const elapsedMs = Date.now() - startedAt;
+
+    const label = extracted.siteName ?? guessSiteName(extracted.url);
+    const modelLabel = usedModel ?? ctx.model.requestedModelLabel;
+    const compactExtraParts = buildLengthPartsForFinishLine(extracted, false);
+    const detailedExtraParts = buildLengthPartsForFinishLine(extracted, true);
+
+    return {
+      usedModel: modelLabel,
+      metrics: buildDaemonMetrics({
+        elapsedMs,
+        summaryFromCache,
+        label,
+        modelLabel,
+        report,
+        costUsd,
+        compactExtraParts,
+        detailedExtraParts,
+      }),
+    };
+  }
+
   await runUrlFlow({ ctx, url: input.url, isYoutubeUrl: isYouTubeUrl(input.url) });
 
   const extracted = extractedRef.value;
@@ -451,6 +579,68 @@ export async function extractContentForUrl({
     onSlidesExtracted?: ((slides: SlideExtractionResult) => void) | null;
   } | null;
 }): Promise<{ extracted: ExtractedLinkContent; slides: SlideExtractionResult | null }> {
+  // PDF URLs: download bytes and convert via markitdown (the URL flow only handles HTML pages)
+  if (isPdfUrl(input.url) && hasUvxCli(env)) {
+    const response = await fetchImpl(input.url, { redirect: "follow" });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF (status ${response.status})`);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const markdown = await convertToMarkdownWithMarkitdown({
+      bytes,
+      filenameHint: null,
+      mediaTypeHint: "application/pdf",
+      uvxCommand: env.UVX_PATH?.trim() || null,
+      timeoutMs: 120_000,
+      env,
+      execFileImpl: execFileTracked as unknown as ExecFileFn,
+    });
+    const pdfContent = markdown.trim();
+    const extracted: ExtractedLinkContent = {
+      url: input.url,
+      title: input.title,
+      description: null,
+      siteName: guessSiteName(input.url),
+      content: pdfContent,
+      truncated: false,
+      totalCharacters: pdfContent.length,
+      wordCount: countWords(pdfContent),
+      transcriptCharacters: null,
+      transcriptLines: null,
+      transcriptWordCount: null,
+      transcriptSource: null,
+      transcriptionProvider: null,
+      transcriptMetadata: null,
+      transcriptSegments: null,
+      transcriptTimedText: null,
+      mediaDurationSeconds: null,
+      video: null,
+      isVideoOnly: false,
+      diagnostics: {
+        strategy: "html",
+        firecrawl: {
+          attempted: false,
+          used: false,
+          cacheMode: cache.mode,
+          cacheStatus: "unknown",
+        },
+        markdown: {
+          requested: false,
+          used: true,
+          provider: null,
+        },
+        transcript: {
+          cacheMode: cache.mode,
+          cacheStatus: "unknown",
+          textProvided: false,
+          provider: null,
+          attemptedProviders: [],
+        },
+      } satisfies ExtractedLinkContent["diagnostics"],
+    };
+    return { extracted, slides: null };
+  }
+
   const extractedRef = { value: null as ExtractedLinkContent | null };
   const slidesRef = { value: null as SlideExtractionResult | null };
 

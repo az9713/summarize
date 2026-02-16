@@ -19,6 +19,7 @@ summary: "Docs index for summarize behaviors and modes."
 - `docs/smoketest.md` — 20-case smoke test plan
 - `docs/website.md` — normal websites (HTML extraction + Firecrawl fallback)
 - `docs/youtube.md` — YouTube transcript extraction (youtubei / captionTracks / Apify)
+- `docs/pdf-support-documentation.md` — PDF URL support for Chrome extension (implementation + troubleshooting)
 
 ## Website
 
