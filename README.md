@@ -1,5 +1,12 @@
 # Summarize 📝 — Chrome Side Panel + CLI
 
+> **This repository is a clone of [https://github.com/steipete/summarize](https://github.com/steipete/summarize).**
+> The original project is created and maintained by [Peter Steinberger (@steipete)](https://github.com/steipete).
+> This clone is for study, documentation, and local development purposes.
+> For the latest updates, issues, and contributions, please refer to the [original repository](https://github.com/steipete/summarize).
+
+---
+
 ![GitHub Repo Banner](https://ghrb.waren.build/banner?header=Summarize%F0%9F%93%9D&subheader=Chrome+Side+Panel+%2B+CLI&bg=f3f4f6&color=1f2937&support=true)
 
 <!-- Created with GitHub Repo Banner by Waren Gonzaga: https://ghrb.waren.build -->
@@ -47,19 +54,130 @@ YouTube slide screenshots (from the browser):
 3. The panel shows a token + install command. Run it in Terminal:
    - `summarize daemon install --token <TOKEN>`
 
-Why a daemon/service?
+### The Daemon — What, Why, and How
 
-- The extension can’t run heavy extraction inside the browser. It talks to a local background service on `127.0.0.1` for fast streaming and media tools (yt‑dlp, ffmpeg, OCR, transcription).
-- The service autostarts (launchd/systemd/Scheduled Task) so the Side Panel is always ready.
+#### What is it?
 
-If you only want the **CLI**, you can skip the daemon install entirely.
+The daemon is a lightweight local HTTP server that runs in the background on your machine. It listens on `127.0.0.1:8787` (localhost only — never exposed to the network) and acts as the bridge between the browser extension and all the heavy processing that browsers can't do themselves.
+
+The implementation lives in [`src/daemon/server.ts`](src/daemon/server.ts). The entry point is `runDaemonServer()` which creates a Node.js `http.Server`:
+
+```typescript
+// src/daemon/server.ts:452-468
+export async function runDaemonServer({
+  env, fetchImpl, config,
+  port = config.port ?? DAEMON_PORT_DEFAULT,  // default: 8787
+  signal, onListening, onSessionEvent,
+}: { ... }): Promise<void> {
+```
+
+#### Why is it needed?
+
+Chrome extensions run in a strict sandbox. They **cannot**:
+
+1. **Run local binaries** — `yt-dlp` (YouTube audio download), `ffmpeg` (video processing, slide extraction), `tesseract` (OCR), `whisper.cpp` (audio transcription) are all command-line tools that only run natively on your OS
+2. **Access the filesystem** — SQLite caching, saving slide images, reading local files
+3. **Make unrestricted API calls** — CORS policies block direct browser-to-LLM-provider calls
+4. **Run long computations** — Chrome kills idle service workers after ~30 seconds
+
+The daemon solves all of these by running as a normal Node.js process on your machine:
+
+```
+Without daemon:  Extension --X--> LLM APIs        (blocked by CORS)
+                 Extension --X--> yt-dlp, ffmpeg   (can't run binaries)
+                 Extension --X--> filesystem        (sandboxed)
+
+With daemon:     Extension --HTTP--> Daemon ---> LLM APIs      (no CORS issue)
+                                     Daemon ---> yt-dlp, ffmpeg (native access)
+                                     Daemon ---> SQLite cache   (filesystem)
+                                     Daemon ---> slide images   (filesystem)
+```
+
+#### How does it work?
+
+**Authentication:** Every `/v1/*` request requires a Bearer token. The token is generated when you install the daemon and shared with the extension. See [`src/daemon/server.ts:512-517`](src/daemon/server.ts):
+
+```typescript
+const token = readBearerToken(req);
+const authed = token && token === config.token;
+if (pathname.startsWith("/v1/") && !authed) {
+  json(res, 401, { ok: false, error: "unauthorized" }, cors);
+  return;
+}
+```
+
+**HTTP API routes** (defined in [`src/daemon/server.ts`](src/daemon/server.ts)):
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/health` | GET | Health check — no auth required. Returns `{ok, pid, version}` |
+| `/v1/ping` | GET | Auth verification — confirms Bearer token is valid |
+| `/v1/summarize` | POST | Start a summarization. Accepts `{url, text, title, model, length, ...}`. Returns `{ok, id}` with a session ID |
+| `/v1/summarize/{id}/events` | GET | **SSE stream** — subscribe to real-time summary events for a session |
+| `/v1/agent` | POST | Chat/agent requests from the extension (SSE or JSON response) |
+| `/v1/tools` | GET | Reports which local tools are available (`yt-dlp`, `ffmpeg`, `tesseract`) |
+| `/v1/models` | GET | Lists available LLM models based on configured API keys |
+| `/v1/logs` | GET | Tail daemon logs (for troubleshooting) |
+| `/v1/processes` | GET | List active/completed processing tasks |
+| `/v1/summarize/{id}/slides` | GET | Fetch extracted slide images for a session |
+| `/v1/slides/{sourceId}/{index}` | GET | Stable URL for individual slide images (survives session cleanup) |
+
+**Streaming via SSE (Server-Sent Events):** When the extension requests a summary, the daemon creates a session and streams results back in real-time using SSE. Events are defined in [`src/shared/sse-events.ts`](src/shared/sse-events.ts):
+
+```typescript
+// src/shared/sse-events.ts:32-40
+export type SseEvent =
+  | { event: "meta";    data: { model, modelLabel, inputSummary, summaryFromCache } }
+  | { event: "status";  data: { text: string } }           // "Extracting content..."
+  | { event: "chunk";   data: { text: string } }           // streaming summary text
+  | { event: "slides";  data: { sourceUrl, slides[] } }    // extracted slide images
+  | { event: "metrics"; data: { elapsedMs, summary } }     // timing/cost info
+  | { event: "done";    data: {} }                          // session complete
+  | { event: "error";   data: { message: string } };       // something went wrong
+```
+
+Sessions are buffered in memory (max 2000 events or 512KB per session, 30-minute lifetime) so clients can reconnect without losing data. See [`src/daemon/server.ts:234-238`](src/daemon/server.ts):
+
+```typescript
+const MAX_SESSION_BUFFER_EVENTS = 2000;
+const MAX_SESSION_BUFFER_BYTES = 512 * 1024;
+const MAX_SESSION_LIFETIME_MS = 30 * 60_000;
+```
+
+**Typical request flow:**
+
+1. Extension sends `POST /v1/summarize` with `{url: "https://example.com", model: "auto", length: "medium"}`
+2. Daemon creates a session (UUID), responds `{ok: true, id: "abc-123"}`
+3. Extension subscribes to `GET /v1/summarize/abc-123/events` (SSE)
+4. Daemon extracts content (using core library's `createLinkPreviewClient`)
+5. Daemon calls LLM via `generateTextWithModelId` / `streamTextWithModelId`
+6. Daemon pushes events to all subscribed clients: `meta` → `status` → `chunk` (repeated) → `metrics` → `done`
+
+**Platform service management:** The daemon registers as an auto-starting system service so it's always ready when you open the extension. The implementation is in [`src/daemon/cli.ts`](src/daemon/cli.ts) with platform-specific backends:
+
+- **macOS:** `launchd` — see [`src/daemon/launchd.ts`](src/daemon/launchd.ts) (label: `com.steipete.summarize.daemon`)
+- **Linux:** `systemd` user service — see [`src/daemon/systemd.ts`](src/daemon/systemd.ts)
+- **Windows:** Scheduled Task — see [`src/daemon/schtasks.ts`](src/daemon/schtasks.ts) (task: `Summarize Daemon`)
+
+**Daemon commands:**
+
+```bash
+summarize daemon install --token <TOKEN>   # Register + start as system service
+summarize daemon install --token <TOKEN> --dev  # Use local source (for developers)
+summarize daemon status                    # Check if running
+summarize daemon restart                   # Restart after code changes
+summarize daemon stop                      # Stop the service
+summarize daemon uninstall                 # Remove autostart (keeps config)
+```
+
+**Configuration:** Stored in `~/.summarize/daemon.json` with the token, port, and a snapshot of environment variables (so the daemon has access to API keys even when started by the system service manager).
+
+If you only want the **CLI**, you can skip the daemon install entirely — the CLI runs everything directly in-process.
 
 Notes:
 
 - Summarization only runs when the Side Panel is open.
 - Auto mode summarizes on navigation (incl. SPAs); otherwise use the button.
-- Daemon is localhost-only and requires a shared token.
-- Autostart: macOS (launchd), Linux (systemd user), Windows (Scheduled Task).
 - Tip: configure `free` via `summarize refresh-free` (needs `OPENROUTER_API_KEY`). Add `--set-default` to set model=`free`.
 
 More:
