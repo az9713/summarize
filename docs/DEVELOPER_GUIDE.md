@@ -1551,6 +1551,35 @@ pnpm -C apps/chrome-extension dev:firefox
 
 7. Make changes, rebuild, and click the reload icon on the extension card
 
+**Set up the daemon in dev mode:**
+
+The extension needs a local daemon to function. When developing from the local codebase, use `--dev` so the daemon runs your local source code:
+
+1. Open the Side Panel in Chrome (click the extension icon)
+2. The panel displays a **token** — copy it
+3. Install the daemon in dev mode:
+   ```bash
+   pnpm summarize daemon install --token <PASTE-TOKEN-HERE> --dev
+   ```
+4. Verify it's running:
+   ```bash
+   pnpm summarize daemon status
+   ```
+
+**Why the daemon?** Chrome extensions are sandboxed — they can't run local binaries (yt-dlp, ffmpeg, whisper, tesseract), access the filesystem, or make unrestricted API calls. The daemon runs on `127.0.0.1:8787` and does the heavy lifting: content extraction, transcription, LLM calls, caching, and slide processing. The extension communicates with it over HTTP/SSE.
+
+**After code changes — full rebuild cycle:**
+
+```bash
+# 1. Rebuild the extension
+pnpm -C apps/chrome-extension build
+
+# 2. In Chrome: go to chrome://extensions and click the reload icon
+
+# 3. Restart the daemon (picks up server-side changes)
+pnpm summarize daemon restart
+```
+
 **Load in Firefox:**
 
 1. Build for Firefox:
@@ -1562,44 +1591,43 @@ pnpm -C apps/chrome-extension dev:firefox
 
 3. Click "Load Temporary Add-on"
 
-4. Select any file in: `apps/chrome-extension/.output/firefox-mv2`
+4. Select the manifest file: `apps/chrome-extension/.output/firefox-mv3/manifest.json`
 
 5. Extension loads (but only until you close Firefox)
 
 **Run E2E tests:**
 
 ```bash
-# Chrome E2E tests
+# Chrome E2E tests (supported automated path)
 pnpm -C apps/chrome-extension test:chrome
 
-# Firefox E2E tests (requires special flag)
+# Firefox E2E tests (unreliable due to moz-extension:// limitations)
 pnpm -C apps/chrome-extension test:firefox:force
 ```
 
 **Extension architecture:**
 
 ```
-apps/chrome-extension/
+apps/chrome-extension/src/
 ├── entrypoints/
-│   ├── background.ts      # Service worker (MV3)
-│   ├── content.ts         # Content script (injected into pages)
-│   └── popup/
-│       ├── index.html     # Popup HTML
-│       └── App.tsx        # Popup React component
-├── components/            # Reusable UI components
-├── lib/                   # Utilities
-└── wxt.config.ts          # WXT configuration
+│   ├── background.ts      # Service worker (MV3) — daemon communication
+│   └── ...                 # Side panel, content scripts
+├── ui/                     # Preact UI components (side panel)
+├── automation/             # Browser automation utilities
+├── lib/                    # Shared utilities (token, storage)
+└── wxt.config.ts           # WXT build config (Chrome/Firefox)
 ```
 
 **How the extension works:**
 
-1. User clicks extension icon
-2. Popup opens (`popup/App.tsx`)
-3. Popup sends message to background script
-4. Background script sends request to daemon (http://localhost:39278)
-5. Daemon streams summary chunks via SSE
-6. Background script forwards chunks to popup
-7. Popup updates UI with streaming text
+1. User opens the Side Panel and clicks Summarize
+2. Panel sends `panel:summarize` message to background service worker
+3. Background sends `POST /v1/summarize` to daemon at `http://127.0.0.1:8787`
+4. Daemon extracts content, calls LLM, creates an SSE session
+5. Background subscribes to `GET /v1/summarize/{id}/events` (SSE stream)
+6. Daemon streams events: `meta`, `status`, `chunk`, `slides`, `metrics`, `done`
+7. Background forwards each event to panel as `bg:summarize-stream`
+8. Panel renders streaming Markdown in the Preact UI
 
 ---
 

@@ -776,7 +776,43 @@ Replace `abc123def456` with the actual token shown in your extension.
 summarize daemon status
 ```
 
-You should see: `Daemon is running on port 57475`
+You should see that the daemon is running on port `8787`.
+
+#### If you're running from the local codebase (developers)
+
+If you cloned the Summarize repo and want to use your local version with the extension instead of a globally installed one:
+
+```bash
+cd /path/to/summarize
+
+# 1. Install dependencies and build
+pnpm install
+pnpm build
+
+# 2. Build the Chrome extension
+pnpm -C apps/chrome-extension build
+
+# 3. Load it as unpacked in Chrome:
+#    - Go to chrome://extensions
+#    - Enable "Developer mode" (top-right toggle)
+#    - Click "Load unpacked"
+#    - Select: apps/chrome-extension/.output/chrome-mv3
+
+# 4. Open the Side Panel, copy the token, install daemon in dev mode:
+pnpm summarize daemon install --token <TOKEN> --dev
+
+# 5. Verify
+pnpm summarize daemon status
+```
+
+The `--dev` flag tells the daemon to run from your local source code so your changes take effect.
+
+After making code changes, rebuild and restart:
+```bash
+pnpm -C apps/chrome-extension build        # Rebuild extension
+# Then click the reload icon on chrome://extensions
+pnpm summarize daemon restart              # Restart daemon
+```
 
 ### 6.3 Using the Extension
 
